@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.MemberMapper">
+    <!-- 컬럼 이름과 프로퍼티 이름이 다르다면 둘 사이를 매핑할 수 있습니다 -->
+    <resultMap id="memberResultMap" type="com.example.demo.model.Member">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="email" property="email" />
+        <result column="age" property="age" />
+    </resultMap>
+
+    <select id="findAll" resultMap="memberResultMap">
+        SELECT id, name, email, age FROM member
+    </select>
+
+    <select id="findById" resultMap="memberResultMap">
+        SELECT id, name, email, age FROM member WHERE id = #{id}
+    </select>
+
+    <select id="findByEmail" resultMap="memberResultMap">
+        SELECT id, name, email, age FROM member WHERE email = #{email}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO member (name, email, age) VALUES (#{name}, #{email}, #{age})
+    </insert>
+
+    <update id="update">
+        UPDATE member SET name = #{name}, email = #{email}, age = #{age} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM member WHERE id = #{id}
+    </delete>
+
+    <!-- 교육용: ${}는 입력을 SQL에 그대로 삽입하므로 SQL 인젝션에 취약합니다.
+     예: order에 id; DROP TABLE member; # 을 입력하면 뒤의 SQL을 주석 처리할 수 있습니다.
+     여러 SQL 실행 허용 여부와 DB 권한에 따라 테이블이 삭제될 수 있습니다.
+     실제 서비스에서는 허용된 컬럼과 방향만 사용하도록 검증해야 합니다. -->
+    <select id="findAllOrderBy" resultMap="memberResultMap">
+        SELECT id, name, email, age FROM member ORDER BY ${order} ${dir}
+    </select>
+</mapper>
