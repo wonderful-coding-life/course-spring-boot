@@ -44,11 +44,31 @@ Accept: application/json
 GET {{baseUrl}}/members/{{memberId}}
 Accept: application/json
 
-### 6. 회원 삭제 (204 No Content)
+### 6. 회원 일부 수정 (200 OK)
+# PATCH는 바꿀 필드만 보낸다. 이름을 정현으로 바꾸고 이메일과 나이는 유지한다.
+PATCH {{baseUrl}}/members/{{memberId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "정현"
+}
+
+### 7. 일부 수정 결과 조회 (200 OK)
+# name은 정현, email은 JungHyuk@campus.com, age는 11인지 확인한다.
+GET {{baseUrl}}/members/{{memberId}}
+Accept: application/json
+
+### 8. 회원 삭제 (204 No Content)
 # 이 파일에서 등록한 회원만 삭제한다. 응답 본문은 없다.
 DELETE {{baseUrl}}/members/{{memberId}}
 
-### 7. 삭제한 회원 조회 (404 Not Found)
+### 9. 삭제한 회원 조회 (404 Not Found)
 # 삭제 후에는 같은 ID로 조회할 수 없으므로 404가 정상적인 결과다.
 GET {{baseUrl}}/members/{{memberId}}
+Accept: application/json
+
+### 10. 이메일로 샘플 회원 조회 (200 OK)
+# ?email=값을 @RequestParam("email")으로 받는다. 등록한 정혁과 관계없이 실행할 수 있다.
+GET {{baseUrl}}/members/search?email=SeojunYoon@campus.com
 Accept: application/json

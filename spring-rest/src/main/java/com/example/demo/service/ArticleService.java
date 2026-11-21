@@ -46,7 +46,7 @@ public class ArticleService {
 
         // map은 현재 페이지의 게시글마다 toResponse를 호출해 응답 DTO로 바꾼다.
         // 페이지 번호, 전체 게시글 수, 전체 페이지 수는 그대로 유지한다.
-        return page.map(article -> toResponse(article));
+        return page.map(this::toResponse);
     }
 
     public ArticleResponse update(Long id, ArticleUpdateRequest request) {
