@@ -1,0 +1,71 @@
+# spring-rest를 실행한 뒤 각 요청 왼쪽의 실행 버튼을 위에서부터 순서대로 누른다.
+# schema.sql, data.sql로 회원과 게시글이 준비되어 있어야 한다.
+# 회원 ID와 게시글 ID는 응답에서 가져오므로 직접 입력할 필요가 없다.
+@baseUrl = http://localhost:8080
+
+### 1. 작성자로 사용할 기존 회원 조회 (200 OK)
+GET {{baseUrl}}/members
+Accept: application/json
+
+> {%
+    // 회원 목록의 첫 회원 ID를 작성자 ID로 저장한다.
+    client.global.set("articleMemberId", response.body[0].id);
+%}
+
+### 2. 게시글 등록 (201 Created)
+# 회원 객체 전체 대신 작성자 ID와 제목, 본문을 보낸다.
+POST {{baseUrl}}/articles
+Content-Type: application/json
+Accept: application/json
+
+{
+  "memberId": {{articleMemberId}},
+  "title": "토요일 오전에 같이 산책하실 분",
+  "description": "오전 열 시에 공원 입구에서 만나요. 한 바퀴 걷고 차도 마시면 좋겠습니다."
+}
+
+> {%
+    // 등록 응답의 게시글 ID를 이후 조회, 수정, 삭제 요청에서 재사용한다.
+    client.global.set("articleId", response.body.id);
+%}
+
+### 3. 등록한 게시글 조회 (200 OK)
+# 응답의 writerName에서 작성자 이름을 확인한다.
+GET {{baseUrl}}/articles/{{articleId}}
+Accept: application/json
+
+### 4. 게시글 수정 (200 OK)
+# 수정 요청은 제목과 본문만 보낸다. 작성자는 바뀌지 않는다.
+PUT {{baseUrl}}/articles/{{articleId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "일요일 오전에 같이 산책하실 분",
+  "description": "토요일에 비 예보가 있어 일요일로 미뤘어요. 시간과 장소는 그대로입니다."
+}
+
+### 5. 수정 결과 조회 (200 OK)
+# 제목, 본문과 수정일 updated를 확인한다.
+GET {{baseUrl}}/articles/{{articleId}}
+Accept: application/json
+
+### 6. 첫 번째 페이지 조회 (200 OK)
+# page=0은 첫 페이지, size=5는 페이지 크기, sort=id,desc는 ID 내림차순이다.
+# content는 현재 목록, totalElements는 전체 게시글 수, totalPages는 전체 페이지 수다.
+GET {{baseUrl}}/articles?page=0&size=5&sort=id,desc
+Accept: application/json
+
+### 7. 두 번째 페이지 조회 (200 OK)
+# page만 1로 바꾸면 같은 정렬과 크기로 다음 페이지를 조회한다.
+GET {{baseUrl}}/articles?page=1&size=5&sort=id,desc
+Accept: application/json
+
+### 8. 게시글 삭제 (204 No Content)
+# 이 파일에서 등록한 게시글만 삭제한다. 응답 본문은 없다.
+DELETE {{baseUrl}}/articles/{{articleId}}
+
+### 9. 삭제한 게시글 조회 (404 Not Found)
+# 삭제 후에는 조회할 수 없으므로 404와 오류 메시지가 정상적인 결과다.
+GET {{baseUrl}}/articles/{{articleId}}
+Accept: application/json

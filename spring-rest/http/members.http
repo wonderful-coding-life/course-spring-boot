@@ -1,0 +1,54 @@
+# spring-rest를 실행한 뒤 각 요청 왼쪽의 실행 버튼을 위에서부터 순서대로 누른다.
+# 등록 응답의 실제 ID를 저장하므로, DB의 회원 ID를 직접 입력할 필요가 없다.
+# 마지막 삭제까지 실행하면 같은 이메일로 다시 등록할 수 있다.
+@baseUrl = http://localhost:8080
+
+### 1. 전체 회원 조회 (200 OK)
+GET {{baseUrl}}/members
+Accept: application/json
+
+### 2. 회원 등록 (201 Created)
+POST {{baseUrl}}/members
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "정혁",
+  "email": "JungHyuk@campus.com",
+  "age": 10
+}
+
+> {%
+    // 등록 응답의 ID를 다음 요청에서 사용할 memberId 변수에 저장한다.
+    client.global.set("memberId", response.body.id);
+%}
+
+### 3. 등록한 회원 조회 (200 OK)
+GET {{baseUrl}}/members/{{memberId}}
+Accept: application/json
+
+### 4. 회원 수정 (200 OK)
+# PUT은 이름, 이메일, 나이를 모두 보낸다. 나이를 11살로 변경한다.
+PUT {{baseUrl}}/members/{{memberId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "정혁",
+  "email": "JungHyuk@campus.com",
+  "age": 11
+}
+
+### 5. 수정 결과 조회 (200 OK)
+# 응답의 age가 11인지 확인한다.
+GET {{baseUrl}}/members/{{memberId}}
+Accept: application/json
+
+### 6. 회원 삭제 (204 No Content)
+# 이 파일에서 등록한 회원만 삭제한다. 응답 본문은 없다.
+DELETE {{baseUrl}}/members/{{memberId}}
+
+### 7. 삭제한 회원 조회 (404 Not Found)
+# 삭제 후에는 같은 ID로 조회할 수 없으므로 404가 정상적인 결과다.
+GET {{baseUrl}}/members/{{memberId}}
+Accept: application/json
