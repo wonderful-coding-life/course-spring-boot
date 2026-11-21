@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>게시글 목록</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>게시글 목록</h2>
+<!-- 전체 게시글 개수와 현재 페이지를 확인한다. -->
+<p th:text="|전체 ${page.totalElements}개 · 현재 ${page.number + 1} / ${page.totalPages}페이지|">전체 100개</p>
+<table>
+    <thead><tr><th>ID</th><th>제목</th><th>작성자</th><th>작성일</th></tr></thead>
+    <tbody>
+    <!-- page.content에는 현재 페이지의 게시글만 들어 있다. -->
+    <tr th:each="article : ${page.content}">
+        <td th:text="${article.id}">1</td>
+        <td><a th:href="@{/articles/{id}(id=${article.id})}" th:text="${article.title}">제주도 푸른 바다</a></td>
+        <td th:text="${article.writerName}">윤서준</td>
+        <td th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</td>
+    </tr>
+    </tbody>
+</table>
+<p th:if="${page.empty}">게시글이 없습니다.</p>
+<!-- 공통 페이징에 페이지 정보와 게시글 목록 주소를 전달한다. -->
+<nav th:replace="~{common :: pagination(${page}, '/articles')}"></nav>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

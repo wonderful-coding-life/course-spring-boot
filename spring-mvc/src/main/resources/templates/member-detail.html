@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>회원 상세</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>회원 상세</h2>
+<p class="message" th:if="${message != null}" th:text="${message}">안내 메시지</p>
+<dl th:object="${member}">
+    <dt>ID</dt><dd th:text="*{id}">1</dd>
+    <dt>이름</dt><dd th:text="*{name}">윤서준</dd>
+    <dt>이메일</dt><dd th:text="*{email}">SeojunYoon@campus.com</dd>
+    <dt>나이</dt><dd th:text="*{age}">10</dd>
+</dl>
+<p><a th:href="@{/members/{id}/edit(id=${member.id})}">수정하기</a></p>
+<!-- 데이터가 바뀌는 삭제 요청은 링크의 GET 대신 폼의 POST로 보낸다. -->
+<form th:action="@{/members/{id}/delete(id=${member.id})}" method="post">
+    <button type="submit">삭제하기</button>
+</form>
+<p><a th:href="@{/members}">목록으로</a></p>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>
