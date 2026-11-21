@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thymeleaf 실습 메뉴</title>
+</head>
+<body>
+<!-- common.html의 header 조각으로 이 태그 전체를 바꾼다. -->
+<header th:replace="~{common :: header}"></header>
+<h2>실습 순서</h2>
+<ol>
+    <li><a th:href="@{/text}">값과 객체 출력</a></li>
+    <li><a th:href="@{/condition}">조건에 따라 표시</a></li>
+    <li><a th:href="@{/list}">회원 목록 출력</a></li>
+    <li><a th:href="@{/link}">회원 정보 링크</a></li>
+    <li><a th:href="@{/form}">회원 정보 입력</a></li>
+    <li><a th:href="@{/utility}">날짜 출력</a></li>
+</ol>
+<p>공통 화면은 common.html과 각 화면의 th:replace를 함께 확인하세요.</p>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

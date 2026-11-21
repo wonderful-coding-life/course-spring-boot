@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 정보 입력</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>회원 정보 입력</h2>
+<p>정혁 / JungHyuk@campus.com / 10살을 입력해 보세요.</p>
+<!-- th:action은 전송할 URL, th:object는 입력값을 담을 객체를 지정한다. -->
+<form th:action="@{/form}" th:object="${member}" method="post">
+    <!-- *{name}은 선택한 member의 name이다. th:field가 id, name, value를 설정한다. -->
+    <p>
+        <label for="name">이름</label>
+        <input type="text" th:field="*{name}" required>
+    </p>
+    <p>
+        <label for="email">이메일</label>
+        <input type="email" th:field="*{email}" required>
+    </p>
+    <p>
+        <label for="age">나이</label>
+        <input type="number" th:field="*{age}" min="0" required>
+    </p>
+    <button type="submit">입력 내용 확인</button>
+</form>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

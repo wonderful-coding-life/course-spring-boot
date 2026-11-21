@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>조건에 따라 표시</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>조건에 따라 표시</h2>
+<p th:text="|${member.name}님은 ${member.age}살입니다.|">윤서준님은 10살입니다.</p>
+<!-- 실습에서는 20살 이상을 성인으로 구분한다. -->
+<!-- th:if는 조건이 참일 때 태그를 표시한다. -->
+<p th:if="${member.age >= 20}">성인 회원입니다.</p>
+<!-- th:unless는 조건이 거짓일 때 태그를 표시한다. -->
+<p th:unless="${member.age >= 20}">미성년자 회원입니다.</p>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

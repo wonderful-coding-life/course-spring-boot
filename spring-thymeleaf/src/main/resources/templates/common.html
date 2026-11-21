@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공통 화면</title>
+</head>
+<body>
+<!-- th:fragment는 다른 화면에서 재사용할 부분에 이름을 붙인다. -->
+<header th:fragment="header">
+    <h1>Thymeleaf 실습</h1>
+    <nav><a th:href="@{/}">실습 메뉴</a></nav>
+    <hr>
+</header>
+<footer th:fragment="footer">
+    <hr>
+    <p>회원 예제로 배우는 Thymeleaf</p>
+</footer>
+</body>
+</html>

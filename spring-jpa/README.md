@@ -19,9 +19,16 @@
 
 ## 실행 방법
 
-- 외부 MariaDB와 `DB_URL`, `DB_USER`, `DB_PASS`를 사용합니다. 스키마·제약은 [schema.sql](sql/schema.sql)로 준비하고 [data.sql](sql/data.sql)로 데이터를 넣습니다.
+- 외부 MariaDB와 `DB_URL`, `DB_USER`, `DB_PASS`를 사용합니다. 빈 DB에 [schema.sql](sql/schema.sql), [data.sql](sql/data.sql)을 순서대로 실행합니다. 공통 SQL로 준비한 DB를 재사용한다면 `data.sql`을 다시 실행하지 않습니다.
 - 회원 4명과 게시글 100개를 사용하며, 회원별 게시글은 25개입니다. 회원 ID는 SQL에서 이메일로 조회하므로 고정 ID를 가정하지 않습니다.
 - 두 실습 클래스의 `@Test`를 개별 실행하고 한글 로그를 확인합니다. 변경 내용은 테스트 후 롤백됩니다. 자동 검증 문법은 REST 모듈에서 배웁니다.
 - 게시글 저장에서는 직접 만든 글을 사용하고, 검색·관계 조회·페이징에서는 기존 데이터를 사용합니다.
+
+## 공통 SQL
+
+JDBC·MyBatis·REST·MVC와 동일한 SQL 파일을 사용합니다. 게시글은 윤서준·윤광철·공미영·김도윤이 순서대로 25개씩 작성합니다.
+
+각 회원 ID는 이메일로 한 번씩 조회해 세션 변수에 저장합니다. MariaDB/MySQL과 H2에서 지원하며 현재 연결에서만 유지되므로 `SET`과 `INSERT`를 같은 연결에서 실행합니다.
+게시글 작성자는 외래 키로 연결되어 있으므로 삭제 실습은 새로 등록한 회원으로 진행합니다.
 
 [전체 강의 안내](../README.md) · [이전: spring-mybatis](../spring-mybatis/README.md) · [다음: spring-rest](../spring-rest/README.md)

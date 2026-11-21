@@ -17,9 +17,16 @@ JDBC에서 직접 처리했던 SQL 실행과 결과 매핑을 Mapper와 XML로 �
 
 ## 실행 방법
 
-- MariaDB 연결 환경변수를 준비하고, 회원 데이터가 없다면 `sql/schema.sql`과 `sql/data.sql`을 순서대로 실행합니다. JDBC 실습의 DB를 재사용할 수도 있습니다.
+- MariaDB 연결 환경변수를 준비하고, 빈 DB에 `sql/schema.sql`과 `sql/data.sql`을 순서대로 실행합니다. JDBC 실습에서 공통 SQL로 준비한 DB를 재사용한다면 `data.sql`을 다시 실행하지 않습니다.
 - `MemberMapperTests`에서 원하는 메서드를 하나씩 실행합니다. 등록·조회·수정·삭제, 이메일 조회, 정렬을 독립적으로 실행할 수 있습니다.
 - 신규 회원은 정혁 / `JungHyuk@campus.com` / 10살입니다. 데이터 변경은 테스트 종료 후 롤백됩니다.
 - 이 단계의 `@Test`는 실습을 실행하기 위한 도구입니다. `assertThat()` 자동 검증 대신 로그로 관찰하며, 검증 문법은 REST 모듈에서 다룹니다.
+
+## 공통 SQL
+
+JDBC·JPA·REST·MVC와 동일한 SQL 파일을 사용합니다. 회원 4명과 게시글 100개를 준비하며, 회원별 게시글은 25개입니다. 이 모듈에서는 회원 테이블만 실습합니다.
+
+각 회원 ID는 이메일로 한 번씩 조회해 세션 변수에 저장합니다. MariaDB/MySQL과 H2에서 지원하며 현재 연결에서만 유지되므로 `SET`과 `INSERT`를 같은 연결에서 실행합니다.
+게시글 작성자는 외래 키로 연결되어 있으므로 삭제 실습은 새로 등록한 회원으로 진행합니다.
 
 [전체 강의 안내](../README.md) · [이전: spring-jdbc](../spring-jdbc/README.md) · [다음: spring-jpa](../spring-jpa/README.md)

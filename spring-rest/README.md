@@ -22,7 +22,7 @@ Member로 기본 REST API를 익힌 뒤 Article로 Service·DTO·페이징을 �
 ## 실행 순서
 
 1. MariaDB 연결 환경변수 `DB_URL`, `DB_USER`, `DB_PASS`를 준비합니다.
-2. [schema.sql](sql/schema.sql), [data.sql](sql/data.sql)을 순서대로 실행합니다. 같은 DB를 앞 모듈과 공유한다면 기존 데이터를 중복 등록하지 않습니다.
+2. 빈 DB에 [schema.sql](sql/schema.sql), [data.sql](sql/data.sql)을 순서대로 실행합니다. 앞 모듈에서 공통 SQL로 준비한 DB를 재사용한다면 `data.sql`을 다시 실행하지 않습니다.
 3. `DemoApplication`을 실행한 뒤 [members.http](http/members.http)로 회원 API를 실습합니다.
 4. [articles.http](http/articles.http)로 게시글 API를 실습합니다. 응답에서 실제 ID를 저장해 다음 요청에 재사용합니다.
 5. [members-batch.http](http/members-batch.http)는 정혁이 아직 등록되지 않은 상태에서 실행합니다. 중복 이메일 실패 후 정혁의 가입도 취소되는지 확인합니다.
@@ -30,5 +30,12 @@ Member로 기본 REST API를 익힌 뒤 Article로 Service·DTO·페이징을 �
 
 `ArticleServiceTests`는 DB가 필요하지 않습니다. `ArticleControllerIntegrationTests`는 준비된 MariaDB가 필요합니다.
 Gradle의 `test`·`build`는 `integration` 태그를 제외합니다. 통합 테스트를 개별 실행할 때 IntelliJ의 실행기를 JUnit으로 사용하면 됩니다. Gradle에 실행을 위임하면 제외 설정이 적용됩니다.
+
+## 공통 SQL
+
+JDBC·MyBatis·JPA·MVC와 동일한 SQL 파일을 사용합니다. 회원 4명과 게시글 100개를 준비하며, 게시글은 윤서준·윤광철·공미영·김도윤이 순서대로 25개씩 작성합니다.
+
+각 회원 ID는 이메일로 한 번씩 조회해 세션 변수에 저장합니다. MariaDB/MySQL과 H2에서 지원하며 현재 연결에서만 유지되므로 `SET`과 `INSERT`를 같은 연결에서 실행합니다.
+게시글 작성자는 외래 키로 연결되어 있으므로 회원 삭제 API 실습은 새로 등록한 회원으로 진행합니다.
 
 [전체 강의 안내](../README.md) · [이전: spring-jpa](../spring-jpa/README.md)

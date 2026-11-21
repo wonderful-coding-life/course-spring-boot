@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>날짜 출력</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>현재 시간</h2>
+<!-- #temporals.format은 날짜·시간을 지정한 형식의 문자열로 바꾼다. MM은 월, mm은 분이다. -->
+<p th:text="${#temporals.format(now, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</p>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

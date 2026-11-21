@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 정보 링크</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>회원 정보 링크</h2>
+<ul>
+    <li th:each="member : ${members}">
+        <!-- @{...}는 URL을 만든다. 예: /link?id=1 -->
+        <a th:href="@{/link(id=${member.id})}" th:text="${member.name}">윤서준</a>
+    </li>
+</ul>
+<section th:if="${member != null}">
+    <h3>선택한 회원</h3>
+    <p th:text="${member.name}">윤서준</p>
+    <p th:text="${member.email}">SeojunYoon@campus.com</p>
+    <p th:text="|${member.age}살|">10살</p>
+</section>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

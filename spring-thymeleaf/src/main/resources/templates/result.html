@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>입력 결과</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>입력 결과</h2>
+<!-- @ModelAttribute로 전달된 객체의 값을 출력한다. -->
+<dl th:object="${member}">
+    <dt>이름</dt>
+    <dd th:text="*{name}">정혁</dd>
+    <dt>이메일</dt>
+    <dd th:text="*{email}">JungHyuk@campus.com</dd>
+    <dt>나이</dt>
+    <dd th:text="*{age}">10</dd>
+</dl>
+<p>입력한 정보는 DB에 저장하지 않습니다.</p>
+<a th:href="@{/form}">다시 입력하기</a>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>값과 객체 출력</title>
+</head>
+<body>
+<header th:replace="~{common :: header}"></header>
+<h2>값과 객체 출력</h2>
+<!-- th:text는 태그 안의 내용을 Model의 값으로 바꾼다. -->
+<p th:text="${name}">회원 이름</p>
+<!-- 점(.)으로 객체의 속성에 접근한다. -->
+<p th:text="${member.name}">윤서준</p>
+<p th:text="${member.email}">SeojunYoon@campus.com</p>
+<p th:text="${member.age}">10</p>
+<!-- |...| 안에서 문장과 값을 함께 사용할 수 있다. -->
+<p th:text="|${member.name}님, 환영합니다!|">회원님, 환영합니다!</p>
+<footer th:replace="~{common :: footer}"></footer>
+</body>
+</html>
