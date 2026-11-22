@@ -1,0 +1,4 @@
+interface:
+  display_name: "실습 교재 DOCX 갱신"
+  short_description: "최신 Markdown을 반영하고 표지·다이어그램·목차·쪽번호를 유지하는 DOCX 배포판 갱신"
+  default_prompt: "$rebuild-practice-docx 최신 실습 교재를 반영해 DOCX 배포판을 다시 만들고 기존 표지와 다이어그램을 유지하며 목차와 페이지 번호를 갱신해 줘."

@@ -46,3 +46,11 @@
 - `spring-security`: 홈 → 이메일 로그인 → 상품 목록 순서로 진행하며, 일반 회원의 조회와 관리자의 등록·수정·삭제 권한을 비교합니다. 상품 목록의 수정·삭제는 GET 링크이며, 등록·수정 저장은 POST 폼을 사용합니다. 로그아웃 확인 후 홈으로 돌아갑니다. 계정과 실습 비밀번호는 프로젝트 README를 참고합니다.
 
 표의 교재 연결은 학습한 개념을 다시 찾아보기 위한 안내입니다.
+
+## 실습 교재 DOCX 배포판 갱신
+
+프로젝트 스킬 [rebuild-practice-docx](.agents/skills/rebuild-practice-docx/SKILL.md)으로 최신 Markdown을 반영하고 기존 표지·캡처·다이어그램을 유지하며 목차와 페이지 번호를 갱신합니다. Codex에서 다음과 같이 요청합니다.
+
+```text
+$rebuild-practice-docx 최신 실습 교재를 반영해서 DOCX 배포판을 다시 만들어 줘.
+```

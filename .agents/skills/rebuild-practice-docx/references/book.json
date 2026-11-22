@@ -1,0 +1,29 @@
+{
+  "preface": "README.md",
+  "chapters": [
+    "01-spring-core.md",
+    "02-database.md",
+    "02-1-jdbc.md",
+    "02-2-mybatis.md",
+    "02-3-jpa.md",
+    "03-restful-api.md",
+    "04-spring-mvc.md",
+    "05-spring-security.md"
+  ],
+  "cover": "practice-book/distribution/올인원 스프링부트 정복_표지.docx",
+  "output": "practice-book/distribution/올인원 스프링부트 정복_실습교재.docx",
+  "diagrams": [
+    {
+      "source": "03-restful-api.md",
+      "mermaidSha256": "3E81D911005EF0DA8BA784BB6921611E15BE2786D52E8BE2FE8F5844E8C1CB7E",
+      "image": "images/03-restful-api/http-message-conversion.png",
+      "alt": "헤더에 따른 요청·응답 본문 변환"
+    },
+    {
+      "source": "05-spring-security.md",
+      "mermaidSha256": "AEE71207397121CFDBB11808D58488FFD889C38C658F10CA1602D1DCA80ABBD7",
+      "image": "images/05-spring-security/security-filter-chain.png",
+      "alt": "로그인과 상품 조회의 인증·인가 흐름"
+    }
+  ]
+}

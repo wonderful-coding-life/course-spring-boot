@@ -76,9 +76,9 @@ tasks.named('test') {
 > **본 교재 참고**  
 > 1.2.1 「의존성 주입」, 1.2.2 「제어의 역전」
 
-카페가 커피를 만들려면 커피 머신이 필요합니다. 이처럼 한 객체가 다른 객체의 기능을 사용하는 관계를 의존 관계라고 합니다. 카페 안에서 머신을 직접 만들면 어떤 머신을 사용할지도 카페 코드가 결정하게 됩니다. 반면 외부에서 머신을 전달받으면 카페는 전달받은 머신의 기능만 사용하면 됩니다. 필요한 객체를 외부에서 전달하는 방식을 의존성 주입(DI)이라고 합니다.
+카페가 커피를 만들려면 커피 머신이 필요합니다. 이처럼 한 객체가 다른 객체의 기능을 사용하는 관계를 의존 관계라고 합니다. 카페 안에서 머신을 직접 만들면 어떤 머신을 사용할지도 카페 코드가 결정하게 되지만, 외부에서 머신을 전달받으면 카페는 전달받은 머신의 기능만 사용하면 됩니다. 필요한 객체를 외부에서 전달하는 방식을 **의존성 주입(Dependency Injection, DI)**이라고 합니다.
 
-스프링에서는 컨테이너가 객체를 만들고 필요한 곳에 전달합니다. 컨테이너가 관리하는 객체를 빈(bean)이라고 하며, 이 예제에서는 커피 머신과 카페가 빈으로 등록됩니다. 자바의 생성자 호출과 객체 참조는 그대로 사용하면서, 객체를 조립하는 일을 스프링에 맡기는 것입니다.
+스프링에서는 컨테이너가 객체를 만들고 필요한 곳에 의존성을 주입합니다. 컨테이너가 관리하는 객체를 빈(bean)이라고 하며, 이 예제에서는 커피 머신과 카페가 빈으로 등록됩니다. 자바의 생성자 호출과 객체 참조는 그대로 사용하면서, 객체 생성과 의존성 주입을 스프링에 맡기는 것입니다.
 
 ### 1.2.1 커피 머신의 공통 기능과 구현체
 
@@ -149,7 +149,7 @@ public class EspressoMachine implements CoffeeMachine {
 
 ### 1.2.2 생성자로 커피 머신 주입받기
 
-클래스 안에서 필요한 객체를 직접 만들면 구현체를 바꾸기 위해 그 클래스를 수정해야 할 수 있습니다. 생성자로 필요한 객체를 받으면 객체를 연결하는 일을 외부에 맡길 수 있습니다. 스프링에서는 이 생성자를 이용해 빈을 주입합니다.
+클래스 안에서 필요한 객체를 직접 만들면 구현체를 바꾸기 위해 그 클래스를 수정해야 할 수 있지만, 생성자로 필요한 객체를 받으면 의존성을 주입하는 일을 외부에 맡길 수 있습니다. 스프링에서는 이 생성자를 이용해 빈을 주입합니다.
 
 **실습 코드**
 
@@ -160,8 +160,6 @@ package com.example.demo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 // 이 클래스를 스프링이 관리하는 빈으로 등록한다.
@@ -171,8 +169,6 @@ import org.springframework.stereotype.Component;
 // 로그 출력을 위한 log 필드를 자동으로 만든다.
 @Slf4j
 public class SpringCafe {
-
-    // private static final Logger log = LoggerFactory.getLogger(SpringCafe.class);
 
     private final CoffeeMachine coffeeMachine;
 
@@ -200,7 +196,51 @@ public SpringCafe(CoffeeMachine coffeeMachine) {
 
 스프링은 SpringCafe의 생성자에 전달할 CoffeeMachine 빈을 찾습니다. 구현체가 둘이므로 @Primary가 붙은 DripCoffeeMachine을 선택해 전달합니다. 카페는 머신의 구체적인 종류를 결정하지 않고, 인터페이스에 선언된 brew()를 호출합니다. 이후 @Primary의 위치를 바꾸면 카페 코드를 고치지 않고도 사용할 머신을 바꿀 수 있습니다.
 
-`@Slf4j`는 로그를 출력할 log 필드를 생성합니다. 로그 설정은 1.4절에서 살펴봅니다.
+**필드 주입과 비교하기**
+
+지금까지는 생성자를 통해 필요한 빈을 전달받았지만, 필드에 `@Autowired`를 붙여 직접 주입받을 수도 있습니다. 다음은 기존 생성자 주입 대신 필드 주입을 사용하는 경우의 선언을 발췌한 비교 코드로, 실제 SpringCafe에 함께 추가하지 않습니다.
+
+```java
+@Autowired
+private CoffeeMachine coffeeMachine;
+```
+
+스프링은 `@Autowired`가 붙은 필드의 타입에 맞는 빈을 찾아 주입하며, 현재처럼 CoffeeMachine 빈이 여러 개라면 `@Primary`가 붙은 드립 머신을 우선 선택합니다. 필드 주입에서는 위와 같이 final 없이 필드를 선언하고, 롬복으로 주입용 생성자를 만들 필요도 없습니다.
+
+필드 주입은 선언이 간단하지만, 생성자 주입은 객체를 만들 때 필요한 의존성을 명확히 드러내고 스프링 없이 테스트할 때도 필요한 객체를 직접 전달하기 쉬우므로 스프링에서는 생성자 주입을 권장합니다. 따라서 이 실습에서는 기존의 생성자 주입 방식을 유지하고, 필드 주입은 다른 코드를 읽을 때 알아볼 수 있는 정도로 살펴봅니다. 생성자 주입은 생성자가 하나라면 `@Autowired`를 생략할 수 있으므로, 롬복이 생성자 하나를 만들어 주는 현재 코드에서도 애노테이션 없이 주입이 동작합니다.
+
+**여러 빈을 리스트로 주입받기**
+
+CoffeeMachine 빈 하나를 주입받는 대신 등록된 머신을 모두 사용하고 싶다면, 다음과 같이 필드 타입을 `List<CoffeeMachine>`으로 선언할 수 있습니다. 기존 coffeeMachine 필드를 대체하는 경우의 선언만 비교하며, 실제 실습 코드에는 적용하지 않습니다. List를 사용하려면 `java.util.List`를 import합니다.
+
+```java
+private final List<CoffeeMachine> coffeeMachines;
+```
+
+기존처럼 클래스에 `@RequiredArgsConstructor`를 붙이면 롬복이 이 필드를 받는 생성자를 만들고, 스프링은 CoffeeMachine 타입의 빈을 찾아 리스트로 전달합니다. 따라서 드립 머신에 `@Primary`가 붙어 있어도 리스트에는 드립 머신과 에스프레소 머신이 모두 포함되며, `@Primary`는 빈 하나를 선택해 주입할 때 우선순위를 지정하는 역할을 합니다. 주입받은 리스트는 자바에서 배운 반복문으로 순회하며 각 머신의 brew()를 호출할 수 있습니다.
+
+**로거 선언과 @Slf4j 비교하기**
+
+로그를 출력하려면 일반적으로 `LoggerFactory.getLogger()`로 로거를 얻어 log 필드에 저장합니다. 따라서 로그를 사용하는 클래스마다 같은 형태의 선언을 반복해야 하는데, 클래스에 `@Slf4j`를 붙이면 롬복이 컴파일 과정에서 이 선언을 자동으로 만들어 반복 코드를 줄여 줍니다. 다음 두 코드는 로거 선언 부분만 비교한 발췌이며, 실제 SpringCafe에 덧붙이지 않습니다.
+
+직접 로거를 선언하는 경우에는 다음과 같이 작성합니다.
+
+```java
+public class SpringCafe {
+    private static final Logger log =
+            LoggerFactory.getLogger(SpringCafe.class);
+}
+```
+
+위 코드에서는 org.slf4j 패키지의 Logger와 LoggerFactory를 import해야 하지만, 롬복을 사용하면 다음과 같이 `@Slf4j`를 붙이는 것으로 같은 역할의 필드가 만들어집니다.
+
+```java
+@Slf4j
+public class SpringCafe {
+}
+```
+
+따라서 실제 실습 코드에서는 log 필드를 직접 선언하지 않고도 `log.info()`와 같은 메서드를 사용할 수 있습니다. 로그 설정과 출력 수준은 1.4절에서 살펴봅니다.
 
 **실행과 예상 결과**
 
@@ -210,7 +250,7 @@ public SpringCafe(CoffeeMachine coffeeMachine) {
 
 ### 1.2.3 컨테이너에서 객체 가져오고 비교하기
 
-개발자가 필요한 객체를 직접 만들고 연결하던 일을 프레임워크가 담당하도록 바뀌는 것을 제어의 역전(IoC)이라고 합니다. 앞서 본 생성자 주입은 스프링이 객체를 연결하는 방법입니다.
+앞에서는 카페가 사용할 커피 머신을 생성자로 전달받도록 작성했습니다. 개발자가 직접 객체를 만들고 의존성을 전달하는 대신 스프링 컨테이너가 빈을 생성하고 필요한 의존성을 주입하도록 맡기는 것은 **제어의 역전(Inversion of Control, IoC)**의 한 예이며, 앞서 살펴본 생성자 주입은 이를 구현하는 방법입니다.
 
 빈의 기본 범위는 싱글톤입니다. 하나의 컨테이너에서 같은 빈을 요청하면 이미 만들어 둔 인스턴스를 공유합니다. 이 예제의 SpringCafe도 하나의 빈으로 관리되므로 두 번 요청해 같은 객체를 받습니다. 반면 new로 생성한 카페는 별도의 자바 객체입니다.
 
@@ -252,10 +292,13 @@ public class DemoApplication {
 
 **코드 설명**
 
-1. `SpringApplication.run()`이 앱과 컨테이너를 시작합니다. `@SpringBootApplication`이 있는 패키지와 하위 패키지에서 컴포넌트를 탐색합니다.
-2. `getBean(SpringCafe.class)`로 관리 중인 카페를 받습니다.
-3. `cafe2`도 같은 컨테이너에서 가져옵니다. `cafe3`은 `new`로 별도로 만듭니다.
-4. `==`는 두 변수가 같은 객체를 가리키는지 비교합니다. 같은 컨테이너에서 받은 cafe와 cafe2는 같은 빈이고, new로 만든 cafe3은 별도의 객체입니다.
+`SpringApplication.run(DemoApplication.class, args)`는 DemoApplication을 설정의 시작점으로 사용해 애플리케이션을 실행합니다. 여기서 `DemoApplication.class`는 해당 클래스의 정보를 담은 Class 객체이며, 스프링은 이 클래스에 붙은 `@SpringBootApplication`을 바탕으로 애플리케이션을 구성합니다.
+
+`@SpringBootApplication`에는 자동 설정과 컴포넌트 탐색 등의 기능이 포함되어 있는데, 컴포넌트 탐색은 기본적으로 DemoApplication이 속한 패키지와 하위 패키지에서 `@Component` 등이 붙은 클래스를 찾습니다. 스프링은 이를 바탕으로 빈을 생성하고 필요한 의존성을 주입하므로, 이 예제에서는 두 커피 머신과 SpringCafe가 빈으로 등록되고 SpringCafe에는 드립 머신이 주입됩니다.
+
+이렇게 빈을 생성하고 의존성 주입과 생명주기를 관리하는 스프링 컨테이너를 이 예제에서는 ApplicationContext라고 부릅니다. `SpringApplication.run()`은 시작한 컨테이너를 반환하므로 이를 context 변수에 저장한 뒤, `getBean(SpringCafe.class)`를 호출해 컨테이너가 관리하는 SpringCafe 빈을 가져올 수 있습니다. 코드에서는 반환받은 컨테이너를 ConfigurableApplicationContext 타입으로 저장하며, 가져온 카페에는 이미 커피 머신이 주입되어 있으므로 바로 `makeCoffee()`를 호출할 수 있습니다.
+
+cafe2도 같은 컨테이너에서 가져오지만 cafe3은 new로 별도로 생성하며, `==` 연산자로 두 변수가 같은 객체를 가리키는지 비교합니다. 같은 컨테이너에서 받은 cafe와 cafe2는 같은 빈이므로 true이고, 직접 만든 cafe3은 별도의 객체이므로 cafe와의 비교 결과가 false입니다.
 
 **실행과 예상 결과**
 
