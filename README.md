@@ -14,10 +14,10 @@
 | 2 | [spring-jdbc](spring-jdbc/README.md) | JDBC로 SQL 실행과 객체 매핑 | 3장 「데이터베이스 연동하기」의 3.1 「JDBC」 |
 | 3 | [spring-mybatis](spring-mybatis/README.md) | Mapper와 XML로 SQL 분리, 회원 CRUD | 3.3 「MyBatis」 |
 | 4 | [spring-jpa](spring-jpa/README.md) | 엔티티, Repository, 관계 매핑, 페이징 | 3.4 「JPA」 |
-| 5 | [spring-rest](spring-rest/README.md) | REST API, Service·DTO, 트랜잭션, 테스트 | 4장 「RESTful API 작성하기」의 4.1~4.3 |
+| 5 | [spring-rest](spring-rest/README.md) | REST API, HTTP 헤더·JSON·XML, Service·DTO, 트랜잭션, 테스트 | 4장 「RESTful API 작성하기」의 4.1~4.3 |
 | 6 | [spring-thymeleaf](spring-thymeleaf/README.md) | 값 출력, 조건·반복, 링크, 폼, 공통 화면 | 5장 「스프링 부트로 게시판 만들기」의 5.2 「템플릿 엔진과 타임리프」, 폼은 5.4.4~5.4.5 |
 | 7 | [spring-mvc](spring-mvc/README.md) | Member 화면 CRUD, 회원 등록의 기본·검증 버전, 게시글 조회·페이징, 공통 예외 처리, H2 | 5.1.1 「웹 애플리케이션 아키텍처와 MVC 패턴」, 5.4 「스프링 부트 게시판 애플리케이션 만들기」 |
-| 8 | [spring-security](spring-security/README.md) | 이메일 로그인, 비밀번호 해시, 권한별 상품 CRUD, 로그인 정보·CSRF | 5.3 「스프링 시큐리티」 |
+| 8 | [spring-security](spring-security/README.md) | 필터 체인의 인증·인가, 이메일 로그인, 비밀번호 해시, 권한별 상품 CRUD, 로그인 정보·CSRF | 5.3 「스프링 시큐리티」 |
 
 각 폴더는 독립적인 Gradle 프로젝트입니다. 실행 명령은 해당 프로젝트 폴더에서 사용합니다.
 

@@ -7,6 +7,36 @@
 
 Spring Security는 요청이 컨트롤러에 도달하기 전에 로그인 상태와 접근 규칙을 확인합니다. 따라서 상품 컨트롤러마다 로그인 여부를 직접 검사하는 코드를 작성할 필요가 없습니다. 이 장에서는 계정 조회와 비밀번호 확인, 요청별 권한 설정이 화면의 동작으로 어떻게 이어지는지 살펴봅니다.
 
+**필터 체인과 인증·인가**
+
+필터(Filter)는 컨트롤러 앞에서 웹 요청을 확인하거나 처리하는 구성 요소입니다. 여러 필터를 정해진 순서대로 연결한 것이 필터 체인입니다. 각 필터는 다음 처리를 이어 가거나, 로그인 성공 시 이동 응답을 보내는 것처럼 그 자리에서 요청 처리를 마칠 수 있습니다. SecurityFilterChain은 보안에 필요한 필터들을 묶은 체인입니다.
+
+이 예제에서는 인증 필터(Authentication Filter)와 인가 필터(Authorization Filter)의 역할을 구분하면 충분합니다.
+
+| 구분 | 이 예제에서 하는 일 | 관련 설정 |
+|---|---|---|
+| 인증 필터 | POST /login의 이메일·비밀번호를 받아 인증 절차에 전달합니다. 실제 필터 클래스는 `UsernamePasswordAuthenticationFilter`입니다. | `formLogin()`, `usernameParameter("email")` |
+| 인가 필터 | 요청한 주소에 접근할 수 있는지 로그인 상태와 권한을 확인합니다. 실제 필터 클래스는 `AuthorizationFilter`입니다. | `authorizeHttpRequests()`, `authenticated()`, `hasRole("ADMIN")` |
+
+여기서 Authentication Filter는 인증을 담당하는 필터를 가리키는 표현입니다. 현재 폼 로그인을 처리하는 클래스 이름은 UsernamePasswordAuthenticationFilter입니다. 필터를 직접 구현하지 않고 SecurityConfig에서 기능과 규칙을 설정합니다.
+
+아래 그림은 핵심 역할만 추린 흐름입니다. 로그인 요청과 로그인 후의 상품 요청은 서로 다른 HTTP 요청입니다. 실제 체인에는 로그인 정보를 읽는 처리와 CSRF 검사, 로그아웃 등 다른 보안 필터도 포함됩니다.
+
+```mermaid
+flowchart TD
+    A["POST /login<br/>이메일·비밀번호"] --> B["인증 필터<br/>UsernamePasswordAuthenticationFilter"]
+    B --> C["인증 처리<br/>회원 조회와 비밀번호 확인"]
+    C -->|성공| D["로그인 정보 세션 저장<br/>/products로 이동 응답"]
+    C -->|실패| E["/login?error로 이동 응답"]
+    D --> F["브라우저의 새 요청<br/>GET /products + 세션 쿠키"]
+    F --> G["세션의 로그인 정보 읽기"]
+    G --> H["인가 필터<br/>AuthorizationFilter"]
+    H -->|허용| I["ProductController<br/>상품 목록 화면"]
+    H -->|거절| J["비로그인: 로그인 화면으로 이동<br/>로그인했지만 권한 부족: 403"]
+```
+
+인증 과정에서는 UserDetailsService로 회원을 조회하고 PasswordEncoder로 비밀번호를 확인합니다. 성공하면 이 예제는 세션에 로그인 정보를 보관합니다. 이후 상품 요청에서는 이메일·비밀번호를 다시 보내지 않고 세션 쿠키로 로그인 상태를 이어 갑니다. 인가 필터는 이 로그인 정보와 요청별 규칙을 사용해 접근을 판단합니다. 세부 흐름은 [폼 로그인](https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/form.html)과 [요청 인가](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html) 공식 문서에서도 확인할 수 있습니다.
+
 **학습 목표**
 
 - 이메일과 비밀번호로 로그인한다.
@@ -353,7 +383,7 @@ public UserDetailsService userDetailsService(MemberRepository memberRepository) 
 
 ### 5.2.3 로그인 화면과 성공·실패
 
-GET은 화면을 보여 주고 POST는 Security가 인증합니다. 로그인에 성공하면 상품 목록으로 이동하도록 설정되어 있습니다.
+GET /login은 Controller가 화면을 보여 주고, POST /login은 인증 필터가 받아 인증을 진행합니다. 로그인에 성공하면 상품 목록으로 이동하도록 설정되어 있습니다.
 
 **실습 코드**
 
@@ -428,7 +458,7 @@ email 입력칸의 name은 SecurityConfig의 usernameParameter("email")과 연�
 
 ### 5.3.1 요청별 접근 규칙
 
-SecurityFilterChain은 어떤 요청을 누구에게 허용하고 로그인·로그아웃을 어떻게 처리할지 설정합니다. 현재 예제는 한 체인으로 구성합니다.
+SecurityFilterChain은 어떤 요청을 누구에게 허용하고 로그인·로그아웃을 어떻게 처리할지 설정합니다. 현재 예제는 한 체인으로 구성합니다. formLogin()은 폼 로그인을 처리할 인증 필터를 구성하고, authorizeHttpRequests()의 규칙은 인가 필터가 사용합니다. 설정 메서드를 작성한 순서가 필터 실행 순서는 아닙니다. 필터 순서는 Spring Security가 구성합니다.
 
 **실습 코드**
 
@@ -874,6 +904,7 @@ Controller가 직접 세션을 지우는 코드를 작성하지 않습니다. �
 ## 5.5 학습 확인
 
 - 인증과 인가를 각각 로그인과 상품 관리에 연결해 설명합니다.
+- 필터 체인이 Controller 앞에서 동작하며, 인증 필터와 인가 필터가 서로 다른 역할을 한다는 점을 설명합니다.
 - UserDetailsService가 반환하는 username이 회원 이름 대신 이메일인 이유를 설명합니다.
 - 해시를 직접 equals로 비교하지 않는 이유를 설명합니다.
 - 화면에서 관리 링크가 안 보이는 것만으로 서버 요청도 차단됐다고 할 수 있는지 생각해 봅니다.

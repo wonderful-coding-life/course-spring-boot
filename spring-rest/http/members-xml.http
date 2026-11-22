@@ -1,0 +1,29 @@
+# members.http의 삭제까지 마친 뒤 위에서부터 순서대로 실행한다.
+# 정혁이 등록되지 않은 상태에서 시작하고, 마지막 삭제로 실습을 마무리한다.
+@baseUrl = http://localhost:8080
+
+### 1. XML로 회원 등록, JSON으로 응답 받기 (201 Created)
+# Content-Type은 보내는 본문 형식, Accept는 받고 싶은 응답 형식이다.
+POST {{baseUrl}}/members
+Content-Type: application/xml
+Accept: application/json
+
+<Member>
+  <name>정혁</name>
+  <email>JungHyuk@campus.com</email>
+  <age>10</age>
+</Member>
+
+> {%
+    // JSON 응답의 실제 ID를 다음 조회·삭제 요청에서 재사용한다.
+    client.global.set("xmlMemberId", response.body.id);
+%}
+
+### 2. 등록한 회원을 XML로 조회 (200 OK)
+# GET에는 본문이 없으므로 Content-Type 없이 Accept만 지정한다.
+GET {{baseUrl}}/members/{{xmlMemberId}}
+Accept: application/xml
+
+### 3. 실습 회원 삭제 (204 No Content)
+DELETE {{baseUrl}}/members/{{xmlMemberId}}
+Accept: application/json

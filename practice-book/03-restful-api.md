@@ -27,9 +27,63 @@ Spring Initializr에서 다음 의존성을 선택하고, 생성한 프로젝트
 
 ![REST API 프로젝트 생성 설정과 Spring Web·Spring Data JPA·MariaDB Driver·Lombok 의존성 선택](images/03-restful-api/spring-initializr.png)
 
-HTTP 요청에서는 메서드와 URL로 수행할 작업과 대상을 지정합니다. 헤더에는 데이터 형식 같은 부가 정보를 담고, 등록·수정할 값은 요청 본문으로 전달할 수 있습니다. 이 예제에서 GET은 조회, POST는 등록, PUT은 전체 수정, PATCH는 부분 수정, DELETE는 삭제에 사용합니다.
+**HTTP 요청과 응답의 구성**
 
-서버는 처리 결과를 상태 코드와 응답 본문으로 알립니다. 상태 코드 200은 성공, 201은 등록 성공, 204는 응답 본문 없이 처리 성공, 404는 요청한 대상을 찾지 못했음을 뜻합니다. 정상 응답과 오류 응답을 구분할 때는 본문의 문구와 함께 상태 코드도 확인합니다.
+HTTP 통신은 클라이언트의 요청과 서버의 응답으로 이루어집니다. 요청에서는 HTTP 메서드로 수행할 작업(Operation)을, URI로 대상 리소스를 지정합니다. 예를 들어 `GET /members/47`은 ID가 47인 회원을 조회하라는 뜻입니다. 이 예제에서 GET은 조회, POST는 등록, PUT은 전체 수정, PATCH는 부분 수정, DELETE는 삭제에 사용합니다.
+
+| 요청의 구성 | 역할 | 예 |
+|---|---|---|
+| 메서드 | 대상에 수행할 작업을 지정합니다. | `POST` |
+| URI | 작업의 대상 리소스를 지정합니다. | `/members` |
+| 요청 헤더 | 본문의 형식, 원하는 응답 형식 등의 부가 정보를 전달합니다. | `Content-Type: application/json` |
+| 요청 본문 | 서버에 보낼 실제 데이터를 담습니다. | 등록할 회원의 이름·이메일·나이 |
+
+| 응답의 구성 | 역할 | 예 |
+|---|---|---|
+| 상태 코드 | 요청 처리 결과를 알립니다. | `201 Created` |
+| 응답 헤더 | 응답 본문의 형식 등의 부가 정보를 전달합니다. | `Content-Type: application/json` |
+| 응답 본문 | 처리 결과 데이터를 담습니다. | 저장된 회원의 ID·이름·이메일·나이 |
+
+모든 요청과 응답에 본문이 필요한 것은 아닙니다. 회원 단건 조회의 GET 요청에는 본문을 보내지 않으며, 삭제에 성공한 204 응답에도 본문이 없습니다.
+
+상태 코드는 첫 번째 숫자로 의미를 크게 구분합니다. 본문의 안내 문구를 읽기 전에 상태 코드를 확인하면 요청이 성공했는지, 어디에서 문제가 생겼는지 파악할 수 있습니다.
+
+| 범위 | 의미 | 대표적인 예 |
+|---|---|---|
+| 2xx | 요청을 성공적으로 처리했습니다. | 200 조회·수정 성공, 201 등록 성공, 204 본문 없이 처리 성공 |
+| 3xx | 요청을 마치기 위해 추가 동작이 필요합니다. | 302 다른 URI로 이동해 다시 요청. 304는 캐시된 내용을 재사용하라는 뜻입니다. |
+| 4xx | 요청 내용이나 접근 조건에 문제가 있습니다. | 400 잘못된 요청, 403 접근 금지, 404 대상 없음 |
+| 5xx | 서버가 요청 처리 중 오류를 만났습니다. | 500 서버 내부 오류 |
+
+**Content-Type과 Accept**
+
+헤더는 본문 자체가 아니라 본문을 어떻게 해석하고 처리할지 알려 주는 정보입니다. 이 장에서는 다음 두 헤더에 집중합니다.
+
+| 헤더 | 요청에서의 의미 | 응답에서의 의미 |
+|---|---|---|
+| `Content-Type` | 지금 보내는 본문이 어떤 형식인지 알립니다. | 서버가 실제로 보낸 본문의 형식을 알립니다. |
+| `Accept` | 클라이언트가 받을 수 있는 응답 형식을 알립니다. | 이 실습에서는 요청에만 지정합니다. |
+
+`application/json`은 JSON, `application/xml`은 XML 형식을 뜻합니다. 예를 들어 요청의 Content-Type이 application/xml이고 Accept가 application/json이면, XML로 데이터를 보내고 JSON으로 결과를 받겠다는 의미입니다. 두 헤더의 값이 같아야 하는 것은 아닙니다. 서버가 요청한 응답 형식을 지원하지 않으면 406, 보낸 본문의 형식을 지원하지 않으면 415로 거절할 수 있습니다.
+
+다음은 회원 등록 요청과 성공 응답의 구성을 읽기 위한 HTTP/1.1 예입니다. 서버 주소 등의 다른 헤더는 생략했습니다. 실제 등록은 3.2.1에서 수행하며, ID 47은 설명을 위한 값입니다.
+
+```http
+POST /members HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{"name":"정혁","email":"JungHyuk@campus.com","age":10}
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{"id":47,"name":"정혁","email":"JungHyuk@campus.com","age":10}
+```
+
+헤더와 본문은 빈 줄로 구분합니다. Content-Type을 바꾸었다면 실제 본문도 그 형식에 맞게 작성해야 합니다. 헤더만 XML로 바꾼다고 JSON 본문이 XML로 바뀌지는 않습니다. 이러한 헤더와 상태 코드의 의미는 [HTTP 표준](https://www.rfc-editor.org/rfc/rfc9110.html)에 정의되어 있습니다.
 
 이 장의 응답 본문은 주로 JSON입니다. JSON은 객체를 `{ }`, 배열을 `[ ]`로 표현하며, 필드 이름과 값을 짝지어 데이터를 전달합니다. 서버는 Member 객체를 그대로 메모리 밖으로 보내는 대신 그 속성을 JSON으로 변환합니다. 클라이언트가 보낸 JSON을 자바 객체로 바꾸어 받는 것도 가능합니다.
 
@@ -404,6 +458,82 @@ spring.web.error.include-message=always
 샘플 이메일 검색을 실행합니다. 이어서 등록되지 않은 이메일로 바꾸어 비교합니다.
 
 등록된 이메일로 조회하면 서버는 상태 코드 200과 회원 정보를 JSON으로 응답합니다. 등록되지 않은 이메일로 조회하면 404와 `회원을 찾을 수 없습니다.`라는 오류 사유가 표시됩니다. 오류 응답에서도 상태 코드와 message를 함께 읽습니다.
+
+### 3.2.7 헤더로 JSON·XML 형식 선택하기
+
+같은 회원 API에서도 본문의 형식을 바꾸어 통신할 수 있습니다. 이 프로젝트의 웹 스타터에는 객체를 JSON으로 변환하는 Jackson이 포함되어 있습니다. XML로 객체를 주고받으려면 XML 변환 라이브러리를 추가합니다.
+
+**실습 코드**
+
+[build.gradle — dependencies에 추가](../spring-rest/build.gradle)
+
+```groovy
+// JSON과 함께 XML 형식의 요청·응답도 자바 객체로 변환한다.
+implementation 'tools.jackson.dataformat:jackson-dataformat-xml'
+```
+
+현재 프로젝트는 Spring Boot 4와 Jackson 3을 사용하므로 `tools.jackson.dataformat` 그룹을 사용합니다. `com.fasterxml.jackson.dataformat:jackson-dataformat-xml`은 Jackson 2용 좌표입니다. 이 프로젝트에서는 위 의존성을 추가한 뒤 Gradle을 다시 불러오고 앱을 재시작합니다. XML 지원은 [Spring Boot 공식 문서](https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.write-xml-rest-service)에서도 확인할 수 있습니다.
+
+스프링 MVC의 메시지 변환기가 요청 본문을 자바 객체로, 반환된 객체를 응답 본문으로 바꿉니다. Content-Type으로 요청 본문을 읽을 형식을 판단하고 Accept를 참고해 응답 형식을 선택합니다. 따라서 MemberController의 등록·조회 메서드를 XML용으로 따로 만들 필요가 없습니다.
+
+```mermaid
+flowchart LR
+    A["XML 요청 본문<br/>Content-Type: application/xml"] --> B["메시지 변환기<br/>XML을 Member로 변환"]
+    B --> C["MemberController<br/>기존 등록 메서드"]
+    C --> D["메시지 변환기<br/>Accept에 맞춰 Member 변환"]
+    D --> E["JSON 또는 XML 응답<br/>Content-Type으로 실제 형식 표시"]
+```
+
+**시작 상태와 실행 순서**
+
+members.http의 삭제까지 마쳐 기존 회원 4명만 있는 상태에서 시작합니다. [members-xml.http](../spring-rest/http/members-xml.http)를 열고 요청 1~3을 순서대로 실행합니다. 정혁의 이메일이 이미 있으면 중복 등록이 되므로, 등록 요청을 반복하지 않고 조회와 삭제를 이어서 실행합니다.
+
+```http
+@baseUrl = http://localhost:8080
+
+### 1. XML로 회원 등록, JSON으로 응답 받기 (201 Created)
+# Content-Type은 보내는 본문 형식, Accept는 받고 싶은 응답 형식이다.
+POST {{baseUrl}}/members
+Content-Type: application/xml
+Accept: application/json
+
+<Member>
+  <name>정혁</name>
+  <email>JungHyuk@campus.com</email>
+  <age>10</age>
+</Member>
+
+> {%
+    // JSON 응답의 실제 ID를 다음 조회·삭제 요청에서 재사용한다.
+    client.global.set("xmlMemberId", response.body.id);
+%}
+
+### 2. 등록한 회원을 XML로 조회 (200 OK)
+# GET에는 본문이 없으므로 Content-Type 없이 Accept만 지정한다.
+GET {{baseUrl}}/members/{{xmlMemberId}}
+Accept: application/xml
+
+### 3. 실습 회원 삭제 (204 No Content)
+DELETE {{baseUrl}}/members/{{xmlMemberId}}
+Accept: application/json
+```
+
+**코드 설명과 예상 결과**
+
+첫 요청은 XML의 name·email·age를 Member의 필드에 담아 저장합니다. 응답은 Accept에 지정한 JSON으로 받으며 상태 코드는 201입니다. 응답의 ID를 xmlMemberId에 저장하므로 실제 DB에서 부여한 값을 그대로 사용할 수 있습니다.
+
+두 번째 요청은 본문이 없는 GET입니다. Accept만 application/xml로 지정하면, 같은 단건 조회 메서드의 Member 반환값을 XML로 받습니다. 응답 상태는 200이고 응답의 Content-Type은 application/xml입니다. 다음은 ID가 48인 경우의 응답 본문을 읽기 좋게 줄을 나눈 예입니다. 실제 ID와 XML의 줄바꿈은 달라질 수 있습니다.
+
+```xml
+<Member>
+  <id>48</id>
+  <name>정혁</name>
+  <email>JungHyuk@campus.com</email>
+  <age>10</age>
+</Member>
+```
+
+조회 요청의 Accept를 application/json으로 바꾸어 다시 실행하면 같은 회원을 JSON으로 받습니다. 마지막 삭제 요청은 204를 반환하며 본문이 없습니다. 삭제까지 마치면 기존 회원 4명만 남고 이후 일괄 가입 실습도 같은 시작 상태에서 진행할 수 있습니다.
 
 ## 3.3 Service와 DTO로 게시글 API 작성
 
@@ -1178,6 +1308,8 @@ test 태스크의 excludeTags 'integration' 설정은 해당 태그의 테스트
 
 ## 3.6 학습 확인
 
+- HTTP 요청의 메서드·URI·헤더·본문과 응답의 상태 코드·헤더·본문을 구분합니다.
+- Content-Type과 Accept를 바꾸었을 때 요청 본문과 응답 형식이 어떻게 달라지는지 설명합니다.
 - @PathVariable·@RequestParam·@RequestBody가 각각 어디의 값을 받는지 설명합니다.
 - Member API와 Article API의 계층 구조를 비교합니다.
 - 일괄 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.

@@ -10,7 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-// 반환한 Member 객체와 목록은 JSON으로 응답한다.
+// 반환한 객체는 Accept 헤더에 따라 JSON 또는 XML로 응답한다.
 @RestController
 @RequestMapping("/members")
 // final 필드를 받는 생성자로 Repository와 Service를 주입받는다.
