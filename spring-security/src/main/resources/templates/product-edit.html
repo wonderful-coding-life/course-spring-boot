@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 수정</title>
+</head>
+<body>
+<h2>상품 수정</h2>
+<form th:action="@{/products/{id}/edit(id=${product.id})}" th:object="${product}" method="post">
+    <p>
+        <label for="name">상품명</label>
+        <input type="text" th:field="*{name}" required maxlength="128">
+    </p>
+    <p>
+        <label for="price">가격</label>
+        <input type="number" th:field="*{price}" min="0" required>
+    </p>
+    <button type="submit">수정하기</button>
+</form>
+<p><a th:href="@{/products}">목록으로</a></p>
+</body>
+</html>

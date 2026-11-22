@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 목록</title>
+</head>
+<body>
+<h2>상품 목록</h2>
+<p>
+    <strong sec:authentication="name">SeojunYoon@campus.com</strong>
+    <a th:href="@{/logout}">로그아웃</a>
+</p>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>상품명</th>
+        <th>가격</th>
+        <th sec:authorize="hasRole('ADMIN')">관리</th>
+    </tr>
+
+    <tr th:each="product : ${products}">
+        <td th:text="${product.id}">1</td>
+        <td th:text="${product.name}">아이폰</td>
+        <td th:text="|${product.price}원|">1200000원</td>
+        <!-- 링크를 표시하는 것과 별개로 SecurityConfig에서도 관리자 권한을 검사한다. -->
+        <td sec:authorize="hasRole('ADMIN')">
+            <a th:href="@{/products/{id}/edit(id=${product.id})}">수정</a>
+            <a th:href="@{/products/{id}/delete(id=${product.id})}">삭제</a>
+        </td>
+    </tr>
+
+</table>
+<p sec:authorize="hasRole('ADMIN')"><a th:href="@{/products/new}">상품 등록하기</a></p>
+<p><a th:href="@{/}">홈으로</a></p>
+</body>
+</html>

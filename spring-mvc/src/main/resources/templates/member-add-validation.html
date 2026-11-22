@@ -2,12 +2,10 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>회원 등록(검증)</title>
-    <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
-<header th:replace="~{common :: header}"></header>
+<div th:replace="~{common :: header}"></div>
 <h2>회원 등록(검증)</h2>
 <p>정혁 / JungHyuk@campus.com / 10살로 등록해 보세요.</p>
 <!-- novalidate로 브라우저의 검증을 끄고 서버의 한글 오류 메시지를 확인한다. -->
@@ -16,21 +14,21 @@
     <p>
         <label for="name">이름</label>
         <input type="text" th:field="*{name}">
-        <span class="error" th:errors="*{name}"></span>
+        <span th:errors="*{name}"></span>
     </p>
     <p>
         <label for="email">이메일</label>
         <input type="email" th:field="*{email}">
-        <span class="error" th:errors="*{email}"></span>
+        <span th:errors="*{email}"></span>
     </p>
     <p>
         <label for="age">나이</label>
         <input type="number" th:field="*{age}">
-        <span class="error" th:errors="*{age}"></span>
+        <span th:errors="*{age}"></span>
     </p>
     <button type="submit">등록하기</button>
 </form>
 <p><a th:href="@{/members}">목록으로</a></p>
-<footer th:replace="~{common :: footer}"></footer>
+<div th:replace="~{common :: footer}"></div>
 </body>
 </html>

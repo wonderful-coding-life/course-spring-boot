@@ -2,16 +2,20 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>회원 목록</title>
-    <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
-<header th:replace="~{common :: header}"></header>
+<div th:replace="~{common :: header}"></div>
 <h2>회원 목록</h2>
 <table>
-    <thead><tr><th>ID</th><th>이름</th><th>이메일</th><th>나이</th><th>수정</th></tr></thead>
-    <tbody>
+    <tr>
+        <th>ID</th>
+        <th>이름</th>
+        <th>이메일</th>
+        <th>나이</th>
+        <th>수정</th>
+    </tr>
+
     <!-- 회원 한 명마다 한 행을 출력한다. -->
     <tr th:each="member : ${members}">
         <td th:text="${member.id}">1</td>
@@ -20,10 +24,10 @@
         <td th:text="${member.age}">10</td>
         <td><a th:href="@{/members/{id}/edit(id=${member.id})}">수정</a></td>
     </tr>
-    </tbody>
+
 </table>
 <p th:if="${#lists.isEmpty(members)}">등록된 회원이 없습니다.</p>
 <p><a th:href="@{/members/new}">회원 등록하기</a></p>
-<footer th:replace="~{common :: footer}"></footer>
+<div th:replace="~{common :: footer}"></div>
 </body>
 </html>

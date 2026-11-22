@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <title>홈</title>
+</head>
+<body>
+<h2>홈</h2>
+<div sec:authorize="isAnonymous()">
+    <a th:href="@{/login}">로그인하기</a>
+</div>
+<div sec:authorize="isAuthenticated()">
+    <!-- name은 UserDetailsService에서 지정한 로그인 ID이며, 이 예제에서는 이메일이다. -->
+    <p>로그인 이메일: <strong sec:authentication="name">SeojunYoon@campus.com</strong></p>
+    <!-- GET /logout은 확인 화면을 연다. 실제 로그아웃은 그 화면의 POST 폼으로 처리한다. -->
+    <p><a th:href="@{/logout}">로그아웃</a></p>
+    <p><a th:href="@{/products}">상품 목록 보기</a></p>
+    <!-- 관리자에게만 등록 링크를 표시하고, 서버에서도 권한을 검사한다. -->
+    <p sec:authorize="hasRole('ADMIN')"><a th:href="@{/products/new}">상품 등록</a></p>
+</div>
+</body>
+</html>

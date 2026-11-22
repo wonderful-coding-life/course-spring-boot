@@ -2,12 +2,10 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>회원 등록</title>
-    <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
-<header th:replace="~{common :: header}"></header>
+<div th:replace="~{common :: header}"></div>
 <h2>회원 등록</h2>
 <p>정혁 / JungHyuk@campus.com / 10살을 입력해 보세요.</p>
 <!-- 입력값을 Member 엔티티에 담아 등록한다. -->
@@ -28,6 +26,6 @@
     <button type="submit">등록하기</button>
 </form>
 <p><a th:href="@{/members}">목록으로</a></p>
-<footer th:replace="~{common :: footer}"></footer>
+<div th:replace="~{common :: footer}"></div>
 </body>
 </html>

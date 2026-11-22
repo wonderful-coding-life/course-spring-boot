@@ -2,22 +2,18 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>게시글 상세</title>
-    <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
-<header th:replace="~{common :: header}"></header>
+<div th:replace="~{common :: header}"></div>
 <h2>게시글 상세</h2>
-<article>
-    <h3 th:text="${article.title}">제주도 푸른 바다</h3>
-    <p th:text="|작성자: ${article.writerName}|">작성자: 윤서준</p>
-    <p>작성일: <span th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
-    <p>수정일: <span th:text="${#temporals.format(article.updated, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
-    <!-- th:text로 본문을 일반 텍스트로 출력한다. -->
-    <p class="description" th:text="${article.description}">협재 해변에서 맑은 바다를 보며 여유를 즐겼다.</p>
-</article>
+<h3 th:text="${article.title}">제주도 푸른 바다</h3>
+<p th:text="|작성자: ${article.writerName}|">작성자: 윤서준</p>
+<p>작성일: <span th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
+<p>수정일: <span th:text="${#temporals.format(article.updated, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
+<!-- th:text로 본문을 일반 텍스트로 출력한다. -->
+<p th:text="${article.description}">협재 해변에서 맑은 바다를 보며 여유를 즐겼다.</p>
 <p><a th:href="@{/articles}">목록으로</a></p>
-<footer th:replace="~{common :: footer}"></footer>
+<div th:replace="~{common :: footer}"></div>
 </body>
 </html>

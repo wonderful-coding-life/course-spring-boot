@@ -2,12 +2,10 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>회원 수정</title>
-    <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
-<header th:replace="~{common :: header}"></header>
+<div th:replace="~{common :: header}"></div>
 <h2>회원 수정</h2>
 <!-- 조회한 Member 엔티티의 값을 입력칸에 표시한다. 수정 대상 ID는 URL로 보낸다. -->
 <form th:action="@{/members/{id}/edit(id=${member.id})}" th:object="${member}" method="post">
@@ -27,6 +25,6 @@
     <button type="submit">수정하기</button>
 </form>
 <p><a th:href="@{/members/{id}(id=${member.id})}">취소하기</a></p>
-<footer th:replace="~{common :: footer}"></footer>
+<div th:replace="~{common :: footer}"></div>
 </body>
 </html>
