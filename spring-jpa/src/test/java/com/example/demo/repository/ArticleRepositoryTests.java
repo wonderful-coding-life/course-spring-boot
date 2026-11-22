@@ -52,14 +52,12 @@ class ArticleRepositoryTests {
         // 기존 게시글 목록에서 하나를 선택한다. 특정 ID나 조회 순서를 가정하지 않는다.
         Article found = articleRepository.findAll().getFirst();
 
-        // 게시글에 연결된 Member 객체로 작성자 정보를 확인한다.
         log.info("게시글 제목: {}", found.getTitle());
         log.info("작성자 이름: {}, 이메일: {}", found.getMember().getName(), found.getMember().getEmail());
     }
 
     @Test
     void findArticlesByTitleContaining() {
-        // 기존 게시글에서 제목에 동네가 포함된 글을 조회한다.
         List<Article> articles = articleRepository.findByTitleContaining("동네");
 
         log.info("'동네' 검색 결과: {}개", articles.size());
@@ -81,7 +79,6 @@ class ArticleRepositoryTests {
 
     @Test
     void findArticlesByPage() {
-        // data.sql의 기존 게시글을 페이지로 조회한다.
         // 0은 첫 페이지, 10은 페이지 크기, descending()은 ID 내림차순이다.
         PageRequest pageable = PageRequest.of(0, 10, Sort.by("id").descending());
         Page<Article> page = articleRepository.findAll(pageable);

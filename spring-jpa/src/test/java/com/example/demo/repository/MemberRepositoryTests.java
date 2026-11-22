@@ -99,7 +99,6 @@ class MemberRepositoryTests {
 
     @Test
     void findMembersByNameAndAgeGreaterThanEqual() {
-        // 이름과 나이 조건을 모두 만족해야 조회된다.
         List<Member> members = memberRepository.findByNameAndAgeGreaterThanEqual("윤광철", 43);
         for (Member member : members) {
             log.info("이름이 윤광철이고 43세 이상인 회원: {}", member);
@@ -112,7 +111,6 @@ class MemberRepositoryTests {
 
     @Test
     void existsMemberByEmail() {
-        // 등록된 이메일은 true, 등록되지 않은 이메일은 false다.
         log.info("윤서준의 이메일이 존재하는가? {}",
                 memberRepository.existsByEmail("SeojunYoon@campus.com"));
         log.info("미등록 이메일이 존재하는가? {}",
@@ -138,7 +136,6 @@ class MemberRepositoryTests {
         Member member = Member.builder().name("정혁")
                 .email("JungHyuk@campus.com").age(10).build();
         memberRepository.save(member);
-        // 작성한 게시글이 없는 회원을 삭제한다.
         memberRepository.delete(member);
 
         log.info("삭제 후에도 회원이 조회되는가? {}",

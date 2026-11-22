@@ -6,8 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+// 이 클래스를 스프링이 관리하는 빈으로 등록한다.
 @Component
+// Lombok이 생성자를 만들고, 스프링이 CoffeeMachine을 주입한다.
 @RequiredArgsConstructor
+// 로그 출력을 위한 log 필드를 자동으로 만든다.
 @Slf4j
 public class SpringCafe {
 

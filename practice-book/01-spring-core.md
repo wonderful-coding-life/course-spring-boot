@@ -28,7 +28,7 @@ Spring Initializr에서 다음과 같이 설정하고 Dependencies에 **Lombok**
 
 프로젝트 생성의 공통 설정과 압축 해제 방법은 [실습 환경과 진행 방법](README.md#실습-환경과-진행-방법)을 참고합니다. 생성한 프로젝트 폴더는 `spring-core`로 준비합니다.
 
-스프링은 애플리케이션을 구성하는 기능을 제공하고, 스프링 부트는 의존성 묶음과 자동 설정으로 프로젝트를 시작하기 쉽게 도와줍니다. 자동 설정은 추가한 라이브러리와 설정을 보고 필요한 객체를 준비하는 기능입니다. 모든 기능을 개발자가 직접 설정할 필요가 줄어듭니다.
+스프링은 객체를 만들고 연결하는 기능을 비롯해 애플리케이션 개발에 필요한 기반을 제공합니다. 스프링 부트는 함께 사용할 라이브러리를 묶어 제공하고, 프로젝트에 추가한 라이브러리와 설정을 바탕으로 실행 환경을 자동으로 구성합니다. 개발자는 필요한 기능을 선택한 뒤 애플리케이션의 동작을 작성하는 데 집중할 수 있습니다.
 
 `src/main/java`는 실행 코드, `src/main/resources`는 설정과 자원, `src/test/java`는 테스트 코드의 위치입니다. `build.gradle`은 사용할 라이브러리와 자바 버전 등을 정의합니다.
 
@@ -76,7 +76,9 @@ tasks.named('test') {
 > **본 교재 참고**  
 > 1.2.1 「의존성 주입」, 1.2.2 「제어의 역전」
 
-카페가 머신의 기능을 사용하면 카페가 머신에 의존한다고 말합니다. 의존성 주입은 필요한 객체를 외부에서 전달받는 방식입니다. 스프링 컨테이너는 등록된 객체를 만들고 필요한 곳에 연결합니다. 컨테이너가 관리하는 객체를 빈이라고 합니다.
+카페가 커피를 만들려면 커피 머신이 필요합니다. 이처럼 한 객체가 다른 객체의 기능을 사용하는 관계를 의존 관계라고 합니다. 카페 안에서 머신을 직접 만들면 어떤 머신을 사용할지도 카페 코드가 결정하게 됩니다. 반면 외부에서 머신을 전달받으면 카페는 전달받은 머신의 기능만 사용하면 됩니다. 필요한 객체를 외부에서 전달하는 방식을 의존성 주입(DI)이라고 합니다.
+
+스프링에서는 컨테이너가 객체를 만들고 필요한 곳에 전달합니다. 컨테이너가 관리하는 객체를 빈(bean)이라고 하며, 이 예제에서는 커피 머신과 카페가 빈으로 등록됩니다. 자바의 생성자 호출과 객체 참조는 그대로 사용하면서, 객체를 조립하는 일을 스프링에 맡기는 것입니다.
 
 ### 1.2.1 커피 머신의 공통 기능과 구현체
 
@@ -103,6 +105,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 @Component
+// CoffeeMachine 빈이 여러 개면 이 빈을 우선 주입한다.
 @Primary
 public class DripCoffeeMachine implements CoffeeMachine {
     @Override
@@ -161,8 +164,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+// 이 클래스를 스프링이 관리하는 빈으로 등록한다.
 @Component
+// Lombok이 생성자를 만들고, 스프링이 CoffeeMachine을 주입한다.
 @RequiredArgsConstructor
+// 로그 출력을 위한 log 필드를 자동으로 만든다.
 @Slf4j
 public class SpringCafe {
 
@@ -184,7 +190,17 @@ public class SpringCafe {
 
 **코드 설명**
 
-`private final CoffeeMachine coffeeMachine`은 카페가 사용할 머신입니다. `@RequiredArgsConstructor`가 이 필드를 받는 생성자를 생성합니다. 생성자가 하나이므로 스프링은 그 생성자로 머신을 전달합니다. `makeCoffee()`는 인터페이스의 `brew()`를 호출합니다. `@Slf4j`가 제공하는 `log`는 1.4절에서 살펴봅니다.
+`private final CoffeeMachine coffeeMachine`은 카페가 사용할 머신을 보관하는 필드입니다. `@RequiredArgsConstructor`를 붙이면 Lombok이 이 final 필드를 초기화하는 생성자를 만듭니다. 생성된 생성자의 형태를 자바 코드로 표현하면 다음과 같습니다. 원리를 이해하기 위한 예시이므로 프로젝트에 이 생성자를 중복해서 추가하지 않습니다.
+
+```java
+public SpringCafe(CoffeeMachine coffeeMachine) {
+    this.coffeeMachine = coffeeMachine;
+}
+```
+
+스프링은 SpringCafe의 생성자에 전달할 CoffeeMachine 빈을 찾습니다. 구현체가 둘이므로 @Primary가 붙은 DripCoffeeMachine을 선택해 전달합니다. 카페는 머신의 구체적인 종류를 결정하지 않고, 인터페이스에 선언된 brew()를 호출합니다. 이후 @Primary의 위치를 바꾸면 카페 코드를 고치지 않고도 사용할 머신을 바꿀 수 있습니다.
+
+`@Slf4j`는 로그를 출력할 log 필드를 생성합니다. 로그 설정은 1.4절에서 살펴봅니다.
 
 **실행과 예상 결과**
 
@@ -194,7 +210,9 @@ public class SpringCafe {
 
 ### 1.2.3 컨테이너에서 객체 가져오고 비교하기
 
-제어의 역전은 객체 생성과 연결의 주도권을 프레임워크에 맡기는 관점입니다. 빈은 기본적으로 한 컨테이너 안에서 하나의 인스턴스로 공유됩니다. 같은 타입을 다시 요청하면 기존 객체를 받을 수 있습니다.
+개발자가 필요한 객체를 직접 만들고 연결하던 일을 프레임워크가 담당하도록 바뀌는 것을 제어의 역전(IoC)이라고 합니다. 앞서 본 생성자 주입은 스프링이 객체를 연결하는 방법입니다.
+
+빈의 기본 범위는 싱글톤입니다. 하나의 컨테이너에서 같은 빈을 요청하면 이미 만들어 둔 인스턴스를 공유합니다. 이 예제의 SpringCafe도 하나의 빈으로 관리되므로 두 번 요청해 같은 객체를 받습니다. 반면 new로 생성한 카페는 별도의 자바 객체입니다.
 
 **실습 코드**
 
@@ -224,8 +242,9 @@ public class DemoApplication {
 		SpringCafe cafe2 = context.getBean(SpringCafe.class);
 		SpringCafe cafe3 = new SpringCafe(new DripCoffeeMachine());
 
-		log.info("cafe == cafe2 : {}", cafe.equals(cafe2)); // true
-		log.info("cafe == cafe3 : {}", cafe.equals(cafe3)); // false
+		// ==는 두 변수가 같은 객체를 가리키는지 비교한다.
+		log.info("cafe == cafe2 : {}", cafe == cafe2); // 같은 빈이므로 true
+		log.info("cafe == cafe3 : {}", cafe == cafe3); // 직접 만든 객체는 다르므로 false
 	}
 
 }
@@ -236,13 +255,22 @@ public class DemoApplication {
 1. `SpringApplication.run()`이 앱과 컨테이너를 시작합니다. `@SpringBootApplication`이 있는 패키지와 하위 패키지에서 컴포넌트를 탐색합니다.
 2. `getBean(SpringCafe.class)`로 관리 중인 카페를 받습니다.
 3. `cafe2`도 같은 컨테이너에서 가져옵니다. `cafe3`은 `new`로 별도로 만듭니다.
-4. 코드의 로그 문구에는 `==`가 있지만 실제 비교 메서드는 `equals()`입니다. SpringCafe는 `equals()`를 재정의하지 않아 현재는 객체의 동일성을 비교합니다.
+4. `==`는 두 변수가 같은 객체를 가리키는지 비교합니다. 같은 컨테이너에서 받은 cafe와 cafe2는 같은 빈이고, new로 만든 cafe3은 별도의 객체입니다.
 
 **실행과 예상 결과**
 
 DemoApplication의 main 왼쪽 실행 버튼을 누릅니다. 프로젝트 폴더에서 `./gradlew.bat bootRun`으로 실행할 수도 있습니다.
 
-로그에서 `cafe == cafe2 : true`, `cafe == cafe3 : false`를 확인합니다. 직접 만든 객체도 자바 객체로 동작하지만 컨테이너가 관리하는 빈과는 별개의 객체입니다.
+예상 출력에서 비교 결과를 확인합니다. 로그의 시각과 클래스 이름은 생략했습니다.
+
+```text
+드립 커피를 만들었습니다.
+주문 정보: CoffeeOrder(coffeeName=드립커피, quantity=3)
+cafe == cafe2 : true
+cafe == cafe3 : false
+```
+
+cafe와 cafe2는 컨테이너에서 같은 빈을 받은 변수입니다. cafe3은 new로 생성한 별도 객체이므로 cafe와의 == 비교 결과가 false입니다. 두 객체가 같은 종류의 커피를 만들 수 있다는 사실과, 같은 객체라는 사실을 구분합니다.
 
 ## 1.3 롬복으로 반복 코드 줄이기
 
@@ -350,7 +378,7 @@ public void makeCoffee() {
 
 `logging.level.root=info`는 전체 기본 레벨입니다. `logging.level.com.example.demo=trace`가 실습 패키지에 적용되어 현재는 TRACE와 DEBUG도 보입니다. 따라서 root만 바꿔도 패키지 설정이 남아 있으면 기대한 대로 줄어들지 않을 수 있습니다.
 
-`logging.file.name`은 현재 작업 디렉터리를 기준으로 로그 파일을 지정합니다. `max-file-size`는 파일 교체 기준, `max-history`는 날짜별 보관 기간, `total-size-cap`은 보관 파일의 총 크기 제한입니다. 파일 교체는 로그 이벤트가 쌓일 때 처리되므로 파일이 없다고 시간 경과만으로 즉시 백업되는 것은 아닙니다.
+`logging.file.name`은 현재 작업 디렉터리를 기준으로 로그 파일의 위치를 지정합니다. `max-file-size`는 파일을 교체할 크기 기준이고, `max-history`는 날짜별 보관 기간, `total-size-cap`은 보관할 로그 파일의 총 크기 제한입니다. 파일 교체는 로그가 기록되는 과정에서 처리됩니다.
 
 **실행과 예상 결과**
 
@@ -367,7 +395,7 @@ public void makeCoffee() {
 - 빈으로 등록한 객체는 누가 생성하는가?
 - CoffeeMachine 구현체가 둘일 때 @Primary는 어떤 역할을 하는가?
 - final 필드와 @RequiredArgsConstructor가 생성자 주입으로 이어지는 이유는 무엇인가?
-- 지금 예제의 equals() 결과와 비교 대상 클래스가 바뀌면 같은 결론을 항상 적용할 수 있는가?
+- cafe와 cafe2의 `==` 비교는 true이고, cafe와 cafe3은 false인 이유는 무엇인가?
 - INFO 설정에서 TRACE가 보일 때 어느 설정부터 확인할 것인가?
 
 [목차](README.md) · [다음: 2장 데이터베이스 연동](02-database.md)

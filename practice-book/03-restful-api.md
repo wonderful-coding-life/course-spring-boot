@@ -3,7 +3,7 @@
 > **본 교재 참고**  
 > 4장 「RESTful API 작성하기」의 4.1 「RESTful API란 무엇인가?」, 4.2 「JPA로 RESTful API 서버 만들기」, 4.3 「테스트」
 
-RESTful API는 클라이언트가 HTTP로 자원을 조회하고 변경할 수 있게 제공하는 인터페이스입니다. 회원은 members, 게시글은 articles라는 URL로 표현합니다. 서버는 요청의 URL·HTTP 메서드·입력 데이터를 보고 작업을 수행하고 상태 코드와 데이터를 응답합니다.
+RESTful API는 클라이언트가 HTTP 요청으로 서버의 데이터를 조회하고 변경할 수 있도록 제공하는 인터페이스입니다. 이 예제에서는 회원을 /members, 게시글을 /articles라는 주소로 표현합니다. 클라이언트가 주소와 HTTP 메서드, 필요한 데이터를 보내면 서버는 요청한 작업을 수행하고 처리 결과를 응답합니다.
 
 이 장은 Member로 기본 API를 만든 뒤 Article에서 Service와 DTO를 배웁니다. 여러 회원 가입을 묶는 트랜잭션을 실습하고, 마지막에 결과를 자동으로 검증하는 테스트를 작성합니다.
 
@@ -27,13 +27,15 @@ Spring Initializr에서 다음 의존성을 선택하고, 생성한 프로젝트
 
 ![REST API 프로젝트 생성 설정과 Spring Web·Spring Data JPA·MariaDB Driver·Lombok 의존성 선택](images/03-restful-api/spring-initializr.png)
 
-요청은 메서드·URL·헤더·본문으로 구성됩니다. GET은 조회, POST는 등록·처리, PUT은 전체 수정, PATCH는 부분 수정, DELETE는 삭제에 사용합니다. 이 예제에서 PATCH는 생략하거나 null인 필드를 그대로 두는 간단한 규칙을 사용합니다.
+HTTP 요청에서는 메서드와 URL로 수행할 작업과 대상을 지정합니다. 헤더에는 데이터 형식 같은 부가 정보를 담고, 등록·수정할 값은 요청 본문으로 전달할 수 있습니다. 이 예제에서 GET은 조회, POST는 등록, PUT은 전체 수정, PATCH는 부분 수정, DELETE는 삭제에 사용합니다.
 
-응답에는 HTTP 상태와 헤더·본문이 있습니다. 200은 성공, 201은 등록 성공, 204는 성공했지만 본문 없음, 404는 대상 없음입니다. JSON은 객체를 `{ }`, 목록을 `[ ]`로 표현하는 데이터 형식입니다. 자바 객체 자체를 네트워크로 보내는 것이 아니라 JSON으로 변환해 전송합니다.
+서버는 처리 결과를 상태 코드와 응답 본문으로 알립니다. 상태 코드 200은 성공, 201은 등록 성공, 204는 응답 본문 없이 처리 성공, 404는 요청한 대상을 찾지 못했음을 뜻합니다. 정상 응답과 오류 응답을 구분할 때는 본문의 문구와 함께 상태 코드도 확인합니다.
+
+이 장의 응답 본문은 주로 JSON입니다. JSON은 객체를 `{ }`, 배열을 `[ ]`로 표현하며, 필드 이름과 값을 짝지어 데이터를 전달합니다. 서버는 Member 객체를 그대로 메모리 밖으로 보내는 대신 그 속성을 JSON으로 변환합니다. 클라이언트가 보낸 JSON을 자바 객체로 바꾸어 받는 것도 가능합니다.
 
 ### 3.1.1 HTTP Client와 응답 ID 재사용
 
-http 파일의 요청 왼쪽 실행 버튼을 눌러 서버에 요청합니다. 먼저 앱이 실행 중이어야 합니다. 파일의 `@baseUrl`은 주소를 반복 작성하지 않기 위한 변수입니다.
+IntelliJ의 HTTP Client는 .http 파일에 작성한 요청을 실행하는 도구입니다. 파일의 `@baseUrl`은 서버 주소를 반복 작성하지 않기 위한 변수입니다. 다음 등록 요청으로 구조를 먼저 읽어 봅니다. 지금은 요청을 실행하지 않고, 실제 등록은 뒤의 회원 등록 실습에서 한 번만 수행합니다.
 
 [members.http — 요청 2](../spring-rest/http/members.http)
 
@@ -57,16 +59,42 @@ Accept: application/json
 
 Content-Type은 보내는 본문의 형식, Accept는 받고 싶은 응답 형식입니다. 응답 처리의 `client.global.set()`은 실제 생성 ID를 다음 요청에서 재사용하도록 합니다. 이 작은 스크립트는 HTTP Client의 기능이며 서버 Controller 코드가 아닙니다. 아래 요청은 파일의 기존 위치에서 순서대로 실행합니다.
 
-정혁을 등록하면 201과 회원 JSON을 받습니다. ID를 5라고 외우지 말고 응답에서 확인합니다. 마지막 삭제 요청까지 실행하면 같은 이메일로 다시 실습할 수 있습니다.
+등록에 성공하면 201 응답과 회원 JSON을 받습니다. 응답의 ID를 memberId 변수에 저장해 다음 조회·수정·삭제 요청에서 재사용합니다. ID를 직접 예상해 입력할 필요가 없습니다.
 
 ## 3.2 Member로 기본 CRUD API
 
 > **본 교재 참고**  
 > 4.2.2 「회원 관리 RESTful API 작성」
 
-Controller는 웹 요청을 받는 진입점입니다. @RestController는 반환 객체를 응답 본문으로 변환합니다. Member 예제에서는 Service·DTO 없이 Repository를 직접 사용해 요청과 CRUD 연결에 집중합니다.
+컨트롤러(Controller)는 웹 요청을 받는 진입점입니다. @RestController가 붙은 클래스에서 객체를 반환하면 그 값은 응답 본문으로 변환됩니다. Member 예제에서는 Repository를 직접 호출해 HTTP 요청과 CRUD 메서드가 어떻게 연결되는지 익힙니다.
+
+**시작 상태와 실행 순서**
+
+회원 4명이 있고 정혁이 등록되지 않은 상태에서 시작합니다. 먼저 members.http의 요청 1로 전체 회원을 조회해 준비 상태를 확인합니다. 이어서 아래 순서대로 각 요청을 실행합니다. 등록 요청을 반복하면 같은 이메일의 중복 가입이 되므로, 절마다 정혁을 새로 만들지 않고 같은 회원을 이어서 사용합니다.
+
+| 실습 | members.http 요청 | 실행 후 회원 상태 |
+|---|---|---|
+| 준비 상태 확인 | 1: 전체 조회 | 기존 회원 4명 |
+| 등록 | 2: 정혁 등록 | 회원 5명, memberId 저장 |
+| 조회 | 1·3: 목록·단건 조회 | 회원 5명 유지 |
+| 전체 수정 | 4·5: 수정·재조회 | 정혁의 나이가 11로 변경 |
+| 부분 수정 | 6·7: 수정·재조회 | 이름이 정현으로 변경, 이메일 유지 |
+| 삭제 | 8·9: 삭제·재조회 | 기존 회원 4명, 삭제한 ID 조회는 404 |
+| 이메일 검색 | 10: 샘플 회원 조회 | 기존 회원 4명 유지 |
 
 [MemberController](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이메일 검색만 추가합니다.
+
+MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 뒤의 API 메서드는 이 클래스 안에 들어갑니다. MemberService는 일괄 가입 실습에서 사용합니다.
+
+```java
+@RestController
+@RequestMapping("/members")
+@RequiredArgsConstructor
+public class MemberController {
+    private final MemberRepository memberRepository;
+    private final MemberService memberService;
+}
+```
 
 [MemberRepository.java](../spring-rest/src/main/java/com/example/demo/repository/MemberRepository.java)
 
@@ -85,7 +113,47 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 }
 ```
 
-### 3.2.1 회원 목록·단건 조회
+### 3.2.1 회원 등록
+
+요청 JSON을 자바 객체로 받으려면 @RequestBody를 사용합니다. DB가 생성할 ID는 클라이언트가 정하지 않습니다.
+
+**실습 코드**
+
+[MemberController.java — create()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
+
+```java
+// POST /members: 요청 JSON을 Member로 받아 등록하고, 201로 응답한다.
+@PostMapping
+@ResponseStatus(HttpStatus.CREATED)
+public Member create(@RequestBody Member member) {
+    // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
+    member.setId(null);
+    return memberRepository.save(member);
+}
+```
+
+**코드 설명**
+
+JSON의 name·email·age가 Member의 속성으로 들어갑니다. setId(null)은 요청에 ID가 들어 있어도 신규 등록의 식별자로 사용하지 않도록 합니다. @ResponseStatus(CREATED)는 실제 201 응답을 지정합니다. 반환한 저장 결과가 응답 JSON입니다.
+
+**실행과 예상 결과**
+
+정혁이 아직 없는 상태에서 members.http의 회원 등록 요청 2를 한 번 실행하고, 응답 본문과 memberId 변수 저장을 확인합니다. 3.1.1절에서는 요청의 구조만 읽었으므로 여기에서 처음 등록합니다.
+
+등록에 성공하면 상태 코드 201과 다음 형태의 회원 JSON을 받습니다. ID 47은 설명용 예시이며 실제 실행에서는 응답으로 받은 ID를 사용합니다.
+
+```json
+{
+  "id": 47,
+  "name": "정혁",
+  "email": "JungHyuk@campus.com",
+  "age": 10
+}
+```
+
+DB에는 정혁의 행이 추가되어 회원이 5명이 됩니다. HTTP 요청은 앞 장의 롤백 테스트와 달리 저장 결과가 남습니다. 다음 조회 실습에서는 이 회원을 그대로 사용합니다.
+
+### 3.2.2 회원 목록·단건 조회
 
 URL 안의 ID는 @PathVariable로 받습니다. Repository의 결과가 없으면 HTTP 404 예외를 발생시킵니다.
 
@@ -134,38 +202,9 @@ Accept: application/json
 
 **실행과 예상 결과**
 
-members.http의 목록 요청을 실행합니다. 단건 요청은 등록 응답으로 memberId를 저장한 뒤 실행합니다.
+앞 절에서 정혁을 한 번 등록한 상태로 members.http의 목록 요청 1과 단건 요청 3을 실행합니다. 단건 요청은 등록 응답에서 저장한 memberId를 사용합니다.
 
-목록은 200과 회원 배열, 단건은 200과 이름·이메일·나이·ID를 반환합니다. 실습 데이터가 초기 상태라면 목록은 4명입니다.
-
-### 3.2.2 회원 등록
-
-요청 JSON을 자바 객체로 받으려면 @RequestBody를 사용합니다. DB가 생성할 ID는 클라이언트가 정하지 않습니다.
-
-**실습 코드**
-
-[MemberController.java — create()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
-
-```java
-// POST /members: 요청 JSON을 Member로 받아 등록하고, 201로 응답한다.
-@PostMapping
-@ResponseStatus(HttpStatus.CREATED)
-public Member create(@RequestBody Member member) {
-    // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
-    member.setId(null);
-    return memberRepository.save(member);
-}
-```
-
-**코드 설명**
-
-JSON의 name·email·age가 Member의 속성으로 들어갑니다. setId(null)은 요청에 ID가 들어 있어도 신규 등록의 식별자로 사용하지 않도록 합니다. @ResponseStatus(CREATED)는 실제 201 응답을 지정합니다. 반환한 저장 결과가 응답 JSON입니다.
-
-**실행과 예상 결과**
-
-members.http의 회원 등록 요청을 실행하고 응답 본문과 memberId 변수 저장을 확인합니다.
-
-정혁 / JungHyuk@campus.com / 10과 실제 ID를 받습니다. DB에도 한 행이 추가됩니다. 이 HTTP 요청은 앞 절의 롤백 테스트와 달리 실제 저장됩니다.
+목록 요청은 상태 코드 200과 회원 5명의 JSON 배열을 반환합니다. 단건 요청은 같은 상태 코드와 정혁 한 명의 JSON 객체를 반환합니다. 배열과 객체의 모양을 비교하고, 단건 응답의 ID가 등록 응답의 ID와 같은지 확인합니다.
 
 ### 3.2.3 회원 전체 수정
 
@@ -364,16 +403,34 @@ spring.web.error.include-message=always
 
 샘플 이메일 검색을 실행합니다. 이어서 등록되지 않은 이메일로 바꾸어 비교합니다.
 
-등록된 이메일은 200과 회원 객체입니다. 미등록 이메일은 404와 `회원을 찾을 수 없습니다.`라는 사유를 확인합니다. 기본 오류 응답의 다른 필드는 실행 환경에 따라 달라질 수 있습니다.
+등록된 이메일로 조회하면 서버는 상태 코드 200과 회원 정보를 JSON으로 응답합니다. 등록되지 않은 이메일로 조회하면 404와 `회원을 찾을 수 없습니다.`라는 오류 사유가 표시됩니다. 오류 응답에서도 상태 코드와 message를 함께 읽습니다.
 
 ## 3.3 Service와 DTO로 게시글 API 작성
 
 > **본 교재 참고**  
 > 4.2.3 「서비스 계층 분리」, 4.2.4 「게시글 RESTful API 구현」
 
-여러 Repository를 호출하거나, 작성자 확인과 응답 변환 같은 처리가 생기면 Controller가 길어집니다. Service는 요청 처리에 필요한 작업을 모으고, Controller는 입력과 응답에 집중하도록 역할을 나눕니다.
+게시글을 등록할 때는 작성자를 찾고, 게시글과 연결해 저장하고, 응답에 넣을 값을 준비해야 합니다. 이 처리를 컨트롤러에 모두 작성하면 HTTP 요청 처리와 데이터 처리 코드가 섞입니다. 서비스(Service)에 필요한 작업을 모으면 컨트롤러는 요청을 받아 전달하고 응답하는 역할에 집중할 수 있습니다.
 
-DTO는 요청 또는 응답에 필요한 값만 담는 객체입니다. 엔티티는 DB 매핑 구조를 표현하고 DTO는 API가 주고받을 구조를 표현합니다. 게시글 등록에는 작성자 ID가 필요하지만 수정에는 필요하지 않습니다. 응답에는 회원 전체 대신 작성자 ID·이름을 포함합니다.
+DTO(Data Transfer Object)는 요청이나 응답에서 전달할 값을 담는 객체입니다. 엔티티는 DB에 연결된 데이터를 표현하고, DTO는 API가 주고받을 데이터를 표현합니다. 예를 들어 엔티티의 member 필드는 Member 객체를 참조하지만, 응답에서는 memberId와 writerName만 제공할 수 있습니다. 클라이언트가 DB의 객체 관계까지 알아야 할 필요가 줄어듭니다.
+
+| 단계 | 사용하는 값·객체 | 처리 내용 |
+|---|---|---|
+| 요청 | memberId·title·description | 클라이언트가 작성자 ID와 게시글 내용을 보냅니다. |
+| 요청 DTO | ArticleCreateRequest | 컨트롤러가 JSON을 자바 객체로 받습니다. |
+| 엔티티 처리 | Member, Article | 서비스가 실제 회원을 찾고 게시글의 작성자로 연결해 저장합니다. |
+| 응답 DTO | ArticleResponse | 저장 결과와 작성자 이름을 응답용 객체에 담습니다. |
+| 응답 | JSON | 클라이언트가 게시글 ID·내용·작성자 이름·날짜를 받습니다. |
+
+**데이터 상태와 실행 순서**: 회원 실습에서 정혁을 삭제한 뒤 시작합니다. articles.http의 요청 1로 작성자 ID를 준비하고, 요청 2로 게시글을 한 번 등록합니다. 같은 articleId로 조회·수정을 수행한 뒤 페이징을 확인하고 마지막에 삭제합니다.
+
+| 단계 | articles.http 요청 | 게시글 수 |
+|---|---|---|
+| 작성자 조회 | 1 | 100개 |
+| 등록 | 2 | 101개 |
+| 단건 조회·수정 | 3·4·5 | 101개 유지 |
+| 첫 페이지·다음 페이지 조회 | 6·7 | 101개 유지 |
+| 삭제·삭제 후 조회 | 8·9 | 100개, 삭제한 글 조회는 404 |
 
 ### 3.3.1 요청·응답 DTO 준비
 
@@ -437,7 +494,25 @@ public class ArticleResponse {
 
 ### 3.3.2 게시글 등록과 응답 변환
 
-Controller → Service → Repository 순서로 요청을 전달합니다. Service는 작성자가 실제로 존재하는지 확인하고 게시글과 연결합니다.
+요청은 Controller → Service → Repository 순서로 전달됩니다. 서비스는 작성자가 실제로 존재하는지 확인하고 게시글과 연결합니다. 먼저 두 클래스의 선언부와 필드를 확인합니다. 아래는 메서드를 제외한 발췌이며, 이어지는 메서드를 각각의 클래스 안에서 읽습니다.
+
+```java
+@RestController
+@RequestMapping("/articles")
+@RequiredArgsConstructor
+public class ArticleController {
+    private final ArticleService articleService;
+}
+```
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ArticleService {
+    private final ArticleRepository articleRepository;
+    private final MemberRepository memberRepository;
+}
+```
 
 **실습 코드**
 
@@ -523,13 +598,29 @@ Accept: application/json
 
 **코드 설명**
 
-요청의 memberId로 Member를 조회합니다. Article에 Member 객체를 연결해 저장하고, 저장 결과를 toResponse()로 바꿉니다. writerName은 관계 객체의 name입니다. Entity→DTO 변환은 DB 구조와 응답 구조를 연결하는 코드입니다. 현재 ArticleService에는 클래스 단위 @Transactional을 붙이지 않았고 save() 등 기본 Repository 메서드를 사용합니다.
+서비스는 요청의 memberId로 실제 Member를 조회하고, Article의 작성자로 연결해 저장합니다. 이어서 toResponse()가 저장 결과를 응답 DTO로 바꿉니다. writerName에는 연결된 Member의 name을 넣습니다. 요청에는 작성자 ID만 있었지만, 응답에는 DB에서 확인한 작성자 이름도 포함되는 것입니다.
+
+이 절의 저장은 기본 Repository 메서드인 save()를 사용합니다. Repository의 저장 메서드가 수행하는 트랜잭션과 여러 저장을 한꺼번에 묶는 서비스의 트랜잭션은 3.4절에서 연결해 설명합니다.
 
 **실행과 예상 결과**
 
 articles.http를 위에서부터 실행합니다. 첫 요청이 작성자 실제 ID를 저장하고 등록 응답이 articleId를 저장합니다.
 
-201과 새 게시글 ID, 제목·본문·작성자 ID·작성자 이름·생성일·수정일을 받습니다. 생성일과 수정일은 엔티티의 PrePersist에서 준비됩니다.
+상태 코드 201과 게시글 응답 JSON을 받습니다. 다음은 작성자로 윤서준이 선택되었을 때의 예상 응답입니다. ID와 시각은 설명용 예시이며, 실제 응답의 articleId를 다음 요청에서 재사용합니다.
+
+```json
+{
+  "id": 137,
+  "title": "토요일 오전에 같이 산책하실 분",
+  "description": "오전 열 시에 공원 입구에서 만나요. 한 바퀴 걷고 차도 마시면 좋겠습니다.",
+  "memberId": 12,
+  "writerName": "윤서준",
+  "created": "2026-11-22T10:00:00",
+  "updated": "2026-11-22T10:00:00"
+}
+```
+
+생성일과 수정일은 엔티티의 @PrePersist에서 설정하므로 처음에는 같습니다. 응답에는 요청에 없던 게시글 ID와 작성자 이름, 날짜가 추가되어 있습니다. 새 글은 DB에 남아 게시글 수가 101개가 됩니다.
 
 ### 3.3.3 게시글 단건 조회
 
@@ -632,52 +723,7 @@ Accept: application/json
 
 제목은 `일요일 오전에 같이 산책하실 분`으로, 본문은 요청한 내용으로 바뀝니다. 작성자와 생성일은 유지되고 수정일은 업데이트 시점에 맞춰집니다.
 
-### 3.3.5 게시글 삭제
-
-Controller는 삭제 성공 상태를, Service는 실제 조회·삭제를 담당합니다.
-
-**실습 코드**
-
-[ArticleController.java — delete()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
-
-```java
-// DELETE /articles/게시글ID: 삭제 후 본문 없이 204로 응답한다.
-@DeleteMapping("/{id}")
-@ResponseStatus(HttpStatus.NO_CONTENT)
-public void delete(@PathVariable("id") Long id) {
-    articleService.delete(id);
-}
-```
-
-[ArticleService.java — delete()](../spring-rest/src/main/java/com/example/demo/service/ArticleService.java)
-
-```java
-public void delete(Long id) {
-    Article article = articleRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
-    articleRepository.delete(article);
-}
-```
-
-[articles.http — 요청 8](../spring-rest/http/articles.http)
-
-```http
-### 8. 게시글 삭제 (204 No Content)
-# 이 파일에서 등록한 게시글만 삭제한다. 응답 본문은 없다.
-DELETE {{baseUrl}}/articles/{{articleId}}
-```
-
-**코드 설명**
-
-존재 여부를 확인한 게시글만 삭제합니다. void 반환과 204 상태로 응답 본문을 비웁니다. articles.http에서 새로 등록한 글을 대상으로 실행합니다.
-
-**실행과 예상 결과**
-
-페이징까지 실습한 다음 삭제 요청과 삭제 후 조회 요청을 실행합니다.
-
-삭제는 204, 이후 단건 조회는 404입니다. 기존 샘플 100개는 유지됩니다.
-
-### 3.3.6 페이징 결과를 DTO로 변환
+### 3.3.5 페이징 결과를 DTO로 변환
 
 Page에는 목록뿐 아니라 전체 개수·현재 페이지 정보도 있습니다. 내용만 DTO로 바꾸면서 페이지 정보를 유지할 때 Page.map()을 사용합니다.
 
@@ -725,14 +771,78 @@ Accept: application/json
 
 첫 페이지와 두 번째 페이지 요청을 실행합니다.
 
-샘플 100개만 있다면 size=5에서 totalElements는 100, totalPages는 20입니다. 새 글 등록 후 삭제 전이라면 101·21이 될 수 있습니다. content에는 최대 5개가 들어 있습니다. Page JSON의 세부 부가 필드 이름은 라이브러리 버전에 따라 달라질 수 있으므로 현재 응답을 함께 확인합니다.
+앞에서 새 글을 한 개 등록했으므로 삭제 전의 전체 게시글 수는 101개입니다. size=5로 요청하면 전체 페이지 수는 21이며, 첫 페이지의 content에는 5개가 들어 있습니다. 응답에서 확인할 주요 필드만 발췌하면 다음과 같습니다.
+
+```json
+{
+  "totalElements": 101,
+  "totalPages": 21
+}
+```
+
+content는 현재 페이지의 글 목록입니다. page를 1로 바꾸어 다음 페이지를 조회하면 목록은 달라지지만 totalElements와 totalPages는 유지됩니다. 새 글을 삭제한 뒤 같은 조건으로 조회하면 전체 100개와 20페이지로 돌아갑니다.
+
+### 3.3.6 게시글 삭제
+
+Controller는 삭제 성공 상태를, Service는 실제 조회·삭제를 담당합니다.
+
+**실습 코드**
+
+[ArticleController.java — delete()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
+
+```java
+// DELETE /articles/게시글ID: 삭제 후 본문 없이 204로 응답한다.
+@DeleteMapping("/{id}")
+@ResponseStatus(HttpStatus.NO_CONTENT)
+public void delete(@PathVariable("id") Long id) {
+    articleService.delete(id);
+}
+```
+
+[ArticleService.java — delete()](../spring-rest/src/main/java/com/example/demo/service/ArticleService.java)
+
+```java
+public void delete(Long id) {
+    Article article = articleRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+    articleRepository.delete(article);
+}
+```
+
+[articles.http — 요청 8](../spring-rest/http/articles.http)
+
+```http
+### 8. 게시글 삭제 (204 No Content)
+# 이 파일에서 등록한 게시글만 삭제한다. 응답 본문은 없다.
+DELETE {{baseUrl}}/articles/{{articleId}}
+```
+
+**코드 설명**
+
+존재 여부를 확인한 게시글만 삭제합니다. void 반환과 204 상태로 응답 본문을 비웁니다. articles.http에서 새로 등록한 글을 대상으로 실행합니다.
+
+**실행과 예상 결과**
+
+앞 절에서 페이징을 확인한 뒤, 등록했던 articleId로 삭제 요청 8과 삭제 후 조회 요청 9를 실행합니다.
+
+삭제는 204, 이후 단건 조회는 404입니다. 기존 샘플 100개는 유지됩니다.
 
 ## 3.4 트랜잭션과 회원 일괄 가입
 
 > **본 교재 참고**  
 > 4.2.5 「트랜잭션 처리」
 
-트랜잭션은 여러 DB 작업을 하나의 성공·실패 단위로 묶는 기능입니다. 두 회원을 저장할 때 두 번째 저장이 실패하면 첫 번째 저장도 취소해야 할 수 있습니다. 기본적으로 @Transactional 메서드를 통과해 나오는 RuntimeException 계열 예외는 롤백 대상입니다.
+트랜잭션은 여러 DB 작업을 하나의 성공·실패 단위로 묶는 기능입니다. 모든 작업이 정상적으로 끝나면 변경 내용을 확정하는데, 이를 커밋(commit)이라고 합니다. 작업 중 오류가 발생해 그 트랜잭션에서 수행한 변경을 취소하는 것은 롤백(rollback)입니다.
+
+두 회원을 일괄 가입시킬 때 첫 번째 저장은 성공하고 두 번째 저장은 실패할 수 있습니다. 일괄 가입 전체를 하나의 작업으로 보려면 첫 번째 저장도 취소해야 합니다. MemberService.registerAll()의 @Transactional은 메서드 안의 두 저장을 같은 트랜잭션에 참여시킵니다. 이 예제의 중복 이메일 예외가 메서드 밖으로 전달되면 전체 변경이 롤백됩니다.
+
+| 상황 | 트랜잭션 경계 | DB에 남는 결과 |
+|---|---|---|
+| 서비스 트랜잭션 안에서 두 회원을 정상 등록 | 두 저장이 하나의 트랜잭션 | 정상 종료 시 두 회원 모두 커밋 |
+| 서비스 트랜잭션 안에서 두 번째 저장 실패 | 두 저장이 하나의 트랜잭션 | 첫 번째 저장도 롤백 |
+| 서비스 트랜잭션 없이 두 번째 저장 실패 | Repository의 각 save()가 별도 트랜잭션으로 실행 | 먼저 완료한 첫 번째 저장은 남음 |
+
+앞 장의 @Transactional 테스트는 종료 후 변경을 되돌리는 실습 환경이었습니다. 여기서는 실제 HTTP 요청으로 저장하므로, 서비스 메서드의 트랜잭션 경계가 어떤 가입 결과를 남기는지 확인합니다.
 
 ### 3.4.1 중복 이메일로 전체 롤백 확인
 
@@ -825,13 +935,23 @@ Accept: application/json
 
 **코드 설명**
 
-Controller가 주입받은 Service의 공개 메서드를 호출하면 스프링의 트랜잭션 처리가 적용됩니다. 정혁을 저장한 뒤 기존 윤서준 이메일로 저장하면 UNIQUE 예외가 발생합니다. 예외를 삼키지 않고 밖으로 전달하므로 일괄 가입 전체가 롤백됩니다. 이 REST 프로젝트에는 이 DB 예외를 409로 바꾸는 전역 처리기가 없어서 현재 요청은 500으로 응답합니다. 다음 MVC 장의 409 예제와 구분합니다.
+컨트롤러가 주입받은 서비스의 공개 메서드를 호출하면 스프링이 트랜잭션을 적용합니다. 첫 번째 정혁을 저장한 뒤 두 번째 회원을 기존 윤서준의 이메일로 저장하면 UNIQUE 제약 위반이 발생합니다. 이 예외를 메서드 안에서 처리하지 않고 밖으로 전달하므로 정혁의 가입도 취소됩니다.
+
+현재 요청의 오류 응답은 500입니다. 이 실습에서는 응답 상태를 확인한 다음 회원 목록을 다시 조회해, 먼저 처리한 가입도 취소되었는지 확인하는 것이 중요합니다.
 
 **실행과 예상 결과**
 
 정혁이 아직 없는 상태에서 members-batch.http를 순서대로 실행합니다. 비교하려면 @Transactional을 잠시 주석 처리하고 재시작해 같은 요청을 실행한 뒤 원상 복구합니다.
 
-트랜잭션 적용 시 요청은 실패하고 정혁도 남지 않습니다. 주석 처리 비교에서는 첫 번째 저장이 남을 수 있습니다. 비교 후 남은 정혁은 members.http 등의 API로 실제 ID를 확인해 삭제하고 다음 실습을 시작합니다.
+트랜잭션을 적용한 상태에서는 요청이 실패하고 회원 목록은 기존 4명을 유지합니다. @Transactional을 주석 처리해 비교하면 첫 번째로 등록한 정혁이 남아 회원이 5명이 됩니다.
+
+비교 실습 후에는 애노테이션을 복구하고, 남아 있는 정혁의 실제 ID를 조회해 삭제합니다. 다음 순서에서 DELETE의 ID는 직전 조회 응답에서 확인한 값으로 바꿉니다. 이전 CRUD 실습의 memberId 변수는 이미 삭제한 회원을 가리킬 수 있습니다.
+
+| 정리 순서 | 실행할 요청 | 확인할 결과 |
+|---|---|---|
+| 1 | GET /members/search?email=JungHyuk@campus.com | 남아 있는 정혁의 실제 ID |
+| 2 | DELETE /members/조회한ID | 응답 본문 없는 204 |
+| 3 | GET /members | 기존 회원 4명 |
 
 ## 3.5 자동 검증과 테스트
 
@@ -877,22 +997,19 @@ import static org.mockito.Mockito.when;
 // JUnit에 Mockito를 연결해 @Mock, @InjectMocks가 붙은 필드를 준비한다.
 @ExtendWith(MockitoExtension.class)
 class ArticleServiceTests {
-    // 실제 Repository 대신 가짜 객체를 만든다. SQL을 실행하거나 DB에 접근하지 않는다.
+    // DB에 접근하지 않는 가짜 Repository를 만든다.
     @Mock
     private ArticleRepository articleRepository;
 
     @Mock
     private MemberRepository memberRepository;
 
-    // 실제 ArticleService 객체를 만들고, 생성자에 위의 가짜 Repository들을 전달한다.
-    // Service 자체는 가짜가 아니므로 실제 메서드 코드가 실행된다.
+    // 실제 Service 객체를 만들고 가짜 Repository들을 생성자로 주입한다.
     @InjectMocks
     private ArticleService articleService;
 
     @Test
-    // DisplayName은 실행 결과에 표시할 테스트 이름이다.
     @DisplayName("게시글을 제목과 작성자 이름이 담긴 응답 DTO로 변환한다")
-    // @Disabled("사유")를 붙이면 이 테스트의 실행을 건너뛴다. 클래스에 붙이면 전체를 건너뛴다.
     void findArticleById() {
         // DB에 저장하지 않고 객체만 준비한다. ID도 테스트에서 직접 정한다.
         Member member = Member.builder()
@@ -900,8 +1017,7 @@ class ArticleServiceTests {
         Article article = Article.builder()
                 .id(1L).title("주말에 한강에서 자전거를 탔어요").member(member).build();
 
-        // when(호출).thenReturn(결과): 가짜 객체가 특정 호출에 돌려줄 결과를 정한다.
-        // 이후 findById(1L)가 호출되면 DB 조회 대신 Optional에 담은 article을 반환한다.
+        // findById(1L)를 호출하면 DB 조회 대신 준비한 article을 반환한다.
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
 
         // 실제 Service가 Entity를 응답 DTO로 바꾸는지 확인한다.
@@ -909,12 +1025,6 @@ class ArticleServiceTests {
 
         assertThat(response.getTitle()).isEqualTo("주말에 한강에서 자전거를 탔어요");
         assertThat(response.getWriterName()).isEqualTo("정혁");
-
-        // isEqualTo(값): 예상값과 같은지 확인한다.
-        // isNotNull(): null이 아닌지 확인한다.
-        // isTrue() / isFalse(): 조건이 참인지 / 거짓인지 확인한다.
-        // hasSize(개수): 목록 등의 크기가 예상한 개수인지 확인한다.
-        // isEmpty(): 목록, 문자열 등이 비어 있는지 확인한다.
     }
 }
 ```
@@ -929,7 +1039,21 @@ class ArticleServiceTests {
 | when(...).thenReturn(...) | 특정 호출의 반환값 지정 |
 | assertThat(실제값).isEqualTo(예상값) | 두 값이 같지 않으면 실패 |
 
-여기의 ID 1은 외부 DB의 ID가 아니라 직접 만든 가짜 객체의 값입니다. memberRepository도 Service 생성자에 필요한 가짜 의존성으로 준비합니다. assertThat의 isEmpty·hasSize 등은 코드 주석에 정리되어 있으므로 실제 사용한 isEqualTo부터 이해합니다.
+여기의 ID 1은 외부 DB의 ID가 아니라 직접 만든 가짜 객체의 값입니다. memberRepository도 Service 생성자에 필요한 가짜 의존성으로 준비합니다. @InjectMocks가 만드는 Service는 실제 객체이므로 findById()의 DTO 변환 코드가 실행됩니다.
+
+`when(호출).thenReturn(반환값)`은 가짜 객체의 응답을 정합니다. 예제에서는 findById(1L)에 Optional로 감싼 article을 돌려주도록 설정했습니다.
+
+**참고: 자주 쓰는 검증 문법**
+
+`assertThat(실제값)` 뒤에 확인할 조건을 연결합니다. 조건을 만족하지 않으면 테스트가 실패합니다. 먼저 예제의 isEqualTo를 실행하고, 나머지 문법은 필요할 때 참고합니다.
+
+| 문법 | 확인할 내용 |
+|---|---|
+| isEqualTo(예상값) | 예상값과 같은가? |
+| isNotNull() | null이 아닌가? |
+| isTrue() / isFalse() | 참인가 / 거짓인가? |
+| hasSize(개수) | 목록 등의 크기가 예상한 개수인가? |
+| isEmpty() | 목록이나 문자열 등이 비어 있는가? |
 
 **실행과 예상 결과**
 
@@ -981,23 +1105,17 @@ class ArticleControllerIntegrationTests {
     @Test
     // DisplayName은 실행 결과에 표시할 테스트 이름이다.
     @DisplayName("게시글 조회 API가 제목과 작성자 이름을 응답한다")
-    // @Disabled("사유")를 붙이면 이 테스트의 실행을 건너뛴다. 클래스에 붙이면 전체를 건너뛴다.
     void findArticleById() throws Exception {
         // data.sql로 준비한 게시글에서 실제 ID를 가져온다.
         Article article = articleRepository.findAll().getFirst();
 
         // perform: 서버 포트를 열지 않고 지정한 HTTP 요청 처리를 실행한다.
-        // jsonPath는 응답 JSON에서 확인할 값을 선택한다.
-        // $: JSON 전체의 시작점 / .필드명: 객체의 필드 / [0]: 배열의 첫 항목
-        // 예: $.title은 제목, $.member.name은 중첩 객체의 이름, $.content[0].title은 목록의 첫 제목이다.
-        // 배열 전체가 응답이면 $[0].title을 사용한다. [*]는 배열의 모든 항목을 뜻한다.
-        // 위의 중첩 객체와 배열 경로는 문법 예시이며, 실제 응답 구조에 맞춰 사용한다.
         mockMvc.perform(get("/articles/{id}", article.getId()))
-                // andDo(print()): 요청 URL, 응답 상태, 응답 본문 등을 콘솔에 출력한다.
+                // andDo(print()): 요청·응답을 콘솔에 출력한다.
                 .andDo(print())
-                // andExpect: 예상 결과와 다르면 테스트가 실패한다. 여기서는 HTTP 200을 확인한다.
+                // andExpect: 응답 상태가 200인지 확인한다.
                 .andExpect(status().isOk())
-                // value: jsonPath로 선택한 값이 괄호 안의 예상값과 같은지 확인한다.
+                // $.title은 title 필드를 선택하고, value는 예상값과 비교한다.
                 .andExpect(jsonPath("$.title").value(article.getTitle()))
                 .andExpect(jsonPath("$.writerName").value(article.getMember().getName()));
     }
@@ -1006,9 +1124,22 @@ class ArticleControllerIntegrationTests {
 
 **코드 설명**
 
-perform()이 요청을 실행하고, andDo(print())가 요청·응답을 출력합니다. andExpect()는 기대한 결과를 확인합니다. jsonPath의 $는 JSON 시작, $.title은 title 필드, $.content[0].title은 content 배열 첫 객체의 title입니다. 현재 테스트 응답은 단건 DTO이므로 title·writerName을 검사합니다.
+perform()이 요청을 실행하고, andDo(print())가 요청·응답을 출력합니다. andExpect()는 기대한 결과를 확인합니다. jsonPath로 응답 JSON의 값을 선택한 뒤 value로 예상값과 비교합니다. 현재 테스트는 단건 DTO의 title·writerName을 검사합니다.
 
-DisplayName은 실행 창에 보일 한글 이름입니다. Disabled는 테스트를 잠시 건너뛰는 애노테이션으로 현재는 설명 주석만 있으며 실제 적용하지 않았습니다. findAll().getFirst()는 샘플 데이터가 있는 상태를 전제로 하며 특정 ID를 가정하지 않습니다.
+DisplayName은 실행 창에 보일 한글 이름입니다. `@Disabled("사유")`를 메서드에 붙이면 그 테스트를 건너뛰고, 클래스에 붙이면 클래스의 모든 테스트를 건너뜁니다. 현재 예제에는 Disabled를 적용하지 않았습니다. findAll().getFirst()는 샘플 데이터가 있는 상태를 전제로 하며 특정 ID를 가정하지 않습니다.
+
+**참고: JSONPath의 기본 경로**
+
+| 경로 | 선택하는 값 |
+|---|---|
+| `$` | 응답 JSON 전체의 시작점 |
+| `$.title` | 최상위 객체의 title 필드 |
+| `$.member.name` | member 객체 안의 name 필드 |
+| `$.content[0].title` | content 배열의 첫 객체 안에 있는 title 필드 |
+| `$[0].title` | 응답 전체가 배열일 때 첫 객체의 title 필드 |
+| `$[*].title` | 응답 배열의 모든 객체에서 선택한 title 필드 |
+
+점(.)으로 객체의 필드에 접근하고, [0]은 배열의 첫 항목, [*]는 모든 항목을 뜻합니다. member와 content 경로는 중첩 객체·배열의 문법을 보여 주는 예시입니다. 현재 단건 응답의 작성자 이름은 `$.writerName`으로 선택합니다.
 
 **실행과 예상 결과**
 
@@ -1022,41 +1153,11 @@ MariaDB 환경변수를 설정하고 IntelliJ의 JUnit 실행기로 통합 테�
 
 **실습 코드**
 
-[build.gradle](../spring-rest/build.gradle)
+다음은 build.gradle에서 테스트 실행 조건을 지정하는 부분입니다. 공통 프로젝트 설정과 의존성은 파일 링크에서 확인할 수 있습니다.
+
+[build.gradle — test 태스크 발췌](../spring-rest/build.gradle)
 
 ```groovy
-plugins {
-	id 'java'
-	id 'org.springframework.boot' version '4.2.0'
-	id 'io.spring.dependency-management' version '1.1.7'
-}
-
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
-}
-
-repositories {
-	mavenCentral()
-}
-
-dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
-	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-	testCompileOnly 'org.projectlombok:lombok'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	testAnnotationProcessor 'org.projectlombok:lombok'
-}
-
 tasks.named('test') {
 	useJUnitPlatform {
 		// test와 build 실행 시 실제 DB가 필요한 통합 테스트를 제외한다.
@@ -1067,7 +1168,7 @@ tasks.named('test') {
 
 **코드 설명**
 
-test 태스크의 excludeTags 'integration'이 해당 태그의 테스트를 기본 test·build에서 제외합니다. @Tag만 붙여 놓으면 자동으로 제외되지 않습니다. 현재 모듈에는 별도 integrationTest 태스크를 만들지 않았습니다.
+test 태스크의 excludeTags 'integration' 설정은 해당 태그의 테스트를 기본 test·build에서 제외합니다. @Tag는 테스트를 분류하는 표식이므로, 제외하려면 Gradle의 실행 조건도 함께 설정해야 합니다.
 
 **실행과 예상 결과**
 

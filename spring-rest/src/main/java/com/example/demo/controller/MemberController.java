@@ -13,7 +13,7 @@ import java.util.List;
 // 반환한 Member 객체와 목록은 JSON으로 응답한다.
 @RestController
 @RequestMapping("/members")
-// final 필드를 받는 생성자를 만들어 Repository를 주입받는다.
+// final 필드를 받는 생성자로 Repository와 Service를 주입받는다.
 @RequiredArgsConstructor
 public class MemberController {
     private final MemberRepository memberRepository;

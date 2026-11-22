@@ -5,7 +5,16 @@
 
 JDBC는 자바 프로그램이 DB에 SQL을 보내고 결과를 받기 위한 API입니다. DB마다 내부 통신 방식이 달라도 자바 코드는 Connection, Statement, ResultSet 같은 공통 인터페이스를 사용할 수 있습니다. MariaDB JDBC 드라이버가 실제 DB와 통신합니다.
 
-이번 절에서는 회원 목록과 회원 한 명을 조회합니다. 연결부터 객체 변환까지 직접 작성해 다음 절의 MyBatis가 어떤 작업을 줄여 주는지 이해합니다.
+이번 절에서는 회원 목록과 회원 한 명을 조회합니다. SQL을 실행해 얻은 결과는 처음부터 Member 객체가 아닙니다. JDBC의 조회 결과에서 컬럼 값을 읽고, 자바 객체를 만들어 담는 과정이 필요합니다. 이 과정을 직접 살펴보면 다음 절에서 MyBatis가 맡아 주는 작업을 이해할 수 있습니다.
+
+| 단계 | 사용할 객체·메서드 | 역할 |
+|---|---|---|
+| DB 연결 | Connection | DB와 통신할 연결을 엽니다. |
+| SQL 실행 | Statement, PreparedStatement | SQL을 전달하고 필요한 값을 바인딩합니다. |
+| 결과 읽기 | ResultSet | 조회 결과를 한 행씩 읽습니다. |
+| 객체로 변환 | Member, List | 읽은 값을 회원 객체와 목록에 담습니다. |
+
+**데이터 상태**: 이 절에서는 조회만 수행하므로 회원 4명과 게시글 100개의 공통 샘플이 그대로 유지됩니다. 같은 DemoApplication을 여러 번 실행해도 데이터가 추가되지 않습니다.
 
 **준비**: [2장 공통 준비](02-database.md)를 완료한 뒤 spring-jdbc를 엽니다. 실습 코드는 [MemberRepository](../spring-jdbc/src/main/java/com/example/demo/repository/MemberRepository.java)에 있습니다. 현재 JDBC 프로젝트는 조회 두 가지를 구현합니다.
 
@@ -78,7 +87,9 @@ public List<Member> findAll() throws SQLException {
     Connection connection = DriverManager.getConnection(url, username, password);
     Statement statement = connection.createStatement();
     ResultSet resultSet = statement.executeQuery(sql);
+    // next()는 다음 행으로 이동하며, 읽을 행이 없으면 false를 반환한다.
     while (resultSet.next()) {
+        // 조회한 한 행의 값을 Member 객체에 담는다.
         Member member = Member.builder()
                 .id(resultSet.getLong("id"))
                 .name(resultSet.getString("name"))
@@ -106,7 +117,7 @@ public List<Member> findAll() throws SQLException {
 
 DemoApplication을 실행해 `모든 회원` 로그를 확인합니다.
 
-샘플 준비 직후라면 List에 회원 4명이 들어 있습니다. SQL에 ORDER BY가 없으므로 표시 순서를 단정하지 않습니다.
+샘플 준비 직후라면 List에 회원 4명이 들어 있습니다. ResultSet에서 회원 한 명을 읽을 때마다 새 Member를 만들고 목록에 추가하므로, DB의 행 네 개가 자바 객체 네 개로 변환됩니다. SQL에 ORDER BY가 없으므로 목록의 표시 순서는 비교 기준으로 삼지 않습니다.
 
 **직접 바꿔 보기**
 
@@ -130,6 +141,7 @@ public Member findById(Long id) throws SQLException {
 
     Connection connection = DriverManager.getConnection(url, username, password);
     PreparedStatement statement = connection.prepareStatement(sql);
+    // 첫 번째 ?에 회원 ID를 넣는다. 번호는 1부터 시작한다.
     statement.setLong(1, id);
 
     ResultSet resultSet = statement.executeQuery();
@@ -201,13 +213,19 @@ public class DemoApplication {
 
 **코드 설명**
 
-`@Component`가 붙은 MemberRepository를 컨테이너에서 꺼냅니다. main에서 조회 메서드를 호출하고 로그를 남깁니다. `throws SQLException`은 이 예제에서 DB 예외를 호출한 쪽으로 전달하도록 한 선언입니다. 반환값을 Member와 List로 받으면 호출자는 JDBC 세부 코드 없이 회원 데이터를 다룰 수 있습니다.
+`@Component`로 등록한 MemberRepository를 컨테이너에서 가져와 두 조회 메서드를 호출합니다. Repository 안에서는 DB 연결과 SQL 실행을 처리하고, 호출한 쪽에는 Member나 List를 반환합니다. 이처럼 데이터에 접근하는 코드를 한곳에 모으면 사용하는 쪽에서 JDBC 처리 과정을 반복해서 작성하지 않아도 됩니다. `throws SQLException`은 DB 작업 중 발생한 예외를 호출한 쪽에 전달한다는 선언입니다.
 
 **실행과 예상 결과**
 
 환경변수를 설정하고 DemoApplication을 실행합니다. 연결 오류가 나면 URL·사용자·비밀번호·MariaDB 실행 상태를 먼저 확인합니다.
 
-목록 로그와 단건 로그가 각각 나타납니다. 쿼리 결과를 직접 객체로 옮기는 코드가 두 메서드에서 반복되는 것을 확인합니다.
+목록 로그에는 회원 4명이 출력됩니다. 이어지는 단건 로그는 조회한 ID가 실제로 존재할 때 회원 한 명을 출력합니다. ID 1이 윤서준인 DB에서의 예상 출력은 다음과 같습니다.
+
+```text
+1번 회원: Member(id=1, name=윤서준, email=SeojunYoon@campus.com, age=10)
+```
+
+기존 DB에서 ID 1이 없으면 단건 결과는 null입니다. 이 경우 전체 목록에서 실제 ID를 확인해 조회 조건을 바꾸면 됩니다. 다음 절에서는 SQL 실행과 결과 객체 변환을 MyBatis에 맡겨 같은 데이터를 조회합니다.
 
 ### 2.1.5 학습 확인
 

@@ -3,9 +3,25 @@
 > **본 교재 참고**  
 > 5장 「스프링 부트로 게시판 만들기」의 5.1 「웹 애플리케이션과 MVC 모델」, 5.2 「템플릿 엔진과 타임리프」, 5.4 「스프링 부트 게시판 애플리케이션 만들기」
 
-웹 API가 JSON을 응답했다면, 이번 장은 사용자가 브라우저에서 직접 사용할 HTML 화면을 만듭니다. Spring MVC는 요청을 받는 Controller, 화면에 전달할 데이터인 Model, 최종 HTML을 만드는 View로 역할을 나눕니다.
+앞 장에서는 클라이언트가 요청하면 서버가 JSON 데이터를 응답했습니다. 이번 장에서는 서버가 HTML을 만들어 응답하고, 사용자는 브라우저 화면에서 데이터를 조회하거나 입력합니다. Spring MVC는 이 과정을 요청을 처리하는 컨트롤러(Controller), 화면에 전달할 데이터인 모델(Model), HTML을 만드는 뷰(View)로 나누어 구성합니다.
 
-Thymeleaf는 HTML 템플릿에 데이터를 넣어 완성된 HTML을 만드는 템플릿 엔진입니다. 브라우저가 DB나 JPA를 직접 호출하는 것이 아니라 서버가 조회한 데이터를 템플릿에 넣어 응답합니다.
+Thymeleaf는 HTML 템플릿에 데이터를 넣어 완성된 HTML을 만드는 템플릿 엔진입니다. 회원 목록을 조회하는 요청의 흐름을 살펴보면 각 역할을 구분하기 쉽습니다.
+
+| 순서 | 처리하는 곳 | 수행할 일 |
+|---|---|---|
+| 1 | 브라우저 | 회원 목록 주소로 GET 요청을 보냅니다. |
+| 2 | 컨트롤러 | Repository를 호출해 회원 목록을 조회합니다. |
+| 3 | Model | 조회한 목록을 members라는 이름으로 보관해 화면에 전달합니다. |
+| 4 | Thymeleaf | 템플릿의 반복문에 회원 목록을 넣어 HTML을 만듭니다. |
+| 5 | 브라우저 | 서버가 응답한 HTML을 화면에 표시합니다. |
+
+브라우저는 JPA나 DB를 직접 호출하지 않습니다. 서버가 데이터 조회와 템플릿 처리를 마친 뒤 응답한 HTML을 표시합니다. REST API와 화면 요청의 차이도 반환값에서 확인할 수 있습니다.
+
+| 구분 | REST API 예제 | MVC 화면 예제 |
+|---|---|---|
+| 컨트롤러 | @RestController | @Controller |
+| 메서드 반환값 | 응답할 객체·DTO | 사용할 템플릿 이름 |
+| 클라이언트가 받는 내용 | JSON | 서버가 만든 HTML |
 
 **학습 순서**
 
@@ -39,7 +55,15 @@ HTML의 h1·h2는 제목, p는 문단, a는 링크, table·tr·th·td는 표, fo
 
 ### 4.1.1 Model과 화면 이름
 
-Model은 Controller에서 화면으로 값을 전달하는 공간입니다. @Controller 메서드가 일반 문자열을 반환하면 이 예제에서는 그 이름의 템플릿을 찾아 HTML을 만듭니다. REST의 @RestController처럼 문자열 자체를 응답하는 것과 구분합니다.
+Model은 컨트롤러에서 화면으로 값을 전달하는 공간입니다. 컨트롤러가 넣은 데이터를 Thymeleaf가 읽어 HTML을 만듭니다. @Controller 메서드가 "text"를 반환하면 이 예제에서는 text.html을 찾습니다. 문자열 "text" 자체를 응답 본문으로 보내는 것이 아닙니다.
+
+ThymeleafController의 메서드는 다음 선언부 안에 들어갑니다. 메서드를 제외한 구조이며, DB에 연결하는 주입 필드는 필요하지 않습니다.
+
+```java
+@Controller
+public class ThymeleafController {
+}
+```
 
 **실습 코드**
 
@@ -394,7 +418,9 @@ public String submit(@ModelAttribute("member") Member member) {
 
 **코드 설명**
 
-GET /form은 빈 Member를 화면에 보냅니다. th:field가 입력칸의 name·id·value를 객체 속성에 연결합니다. label의 for와 입력칸 id가 연결됩니다. POST /form의 @ModelAttribute는 폼 이름·이메일·나이를 Member에 바인딩하고 Model에서도 사용할 수 있게 합니다. JSON 본문을 받는 @RequestBody와는 입력 형식이 다릅니다.
+GET /form은 빈 Member를 화면에 전달합니다. th:object로 이 객체를 선택하고 th:field를 각 입력칸에 붙이면 name·id·value가 해당 속성과 연결됩니다. 예를 들어 이름 입력칸의 name이 name이므로 서버는 전달된 값을 Member의 name 속성에 넣을 수 있습니다.
+
+POST /form의 @ModelAttribute는 폼에서 보낸 이름·이메일·나이를 객체에 담습니다. 입력값을 객체 속성에 연결하는 과정을 바인딩이라고 합니다. 이 객체는 Model에도 들어가므로 결과 템플릿에서 다시 사용할 수 있습니다. 폼 입력을 받는 @ModelAttribute와 JSON 본문을 받는 @RequestBody는 입력 형식에 맞추어 구분합니다.
 
 **실행과 예상 결과**
 
@@ -557,7 +583,7 @@ CREATE TABLE IF NOT EXISTS article (
 
 ddl-auto=none은 JPA의 별도 테이블 생성을 끕니다. 테이블 생성은 SQL이 담당하도록 역할을 정한 것입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원합니다. data.sql의 본문은 [공통 샘플](../spring-mvc/src/main/resources/data.sql)을 사용합니다. 회원 4명과 각 25개의 글을 준비합니다.
 
-현재 MVC 설정에는 H2 콘솔 활성화가 있습니다. 사용하려면 /h2-console에서 로그의 실제 jdbc:h2:mem:... 주소와 sa·빈 비밀번호를 입력합니다. 이 장의 화면 CRUD를 실행하는 데 콘솔을 반드시 열 필요는 없습니다.
+DB 내용을 직접 확인하고 싶다면 /h2-console을 사용할 수 있습니다. 실행 로그에 표시된 실제 jdbc:h2:mem:... 주소와 사용자 sa, 빈 비밀번호로 접속합니다. 화면 CRUD는 콘솔을 열지 않아도 실습할 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -570,9 +596,32 @@ spring-thymeleaf를 종료한 뒤 spring-mvc의 DemoApplication을 실행합니�
 > **본 교재 참고**  
 > 5.1.1 「웹 애플리케이션 아키텍처와 MVC 패턴」, 5.4.6 「관리자 기능 구현」
 
-화면 CRUD는 입력 화면을 여는 GET과 값을 처리하는 POST를 나눕니다. HTML form은 name이 있는 입력값을 보내고 Controller는 @ModelAttribute로 받습니다. 기본 등록·수정에서는 Member 엔티티를 직접 사용합니다.
+화면 CRUD에서는 입력 화면을 여는 GET과 입력값을 처리하는 POST를 나눕니다. 브라우저가 보낸 폼 값을 @ModelAttribute로 받아 회원을 저장하고, 조회 결과는 Model을 통해 화면으로 전달합니다. 기본 등록·수정에서는 Member 엔티티를 그대로 사용해 이 흐름에 집중합니다.
+
+**시작 상태와 실행 순서**
+
+spring-mvc를 새로 실행해 회원 4명과 게시글 100개가 준비된 상태에서 시작합니다. 기본 CRUD를 실습하는 동안에는 앱을 계속 실행해 둡니다. H2 메모리 DB는 앱을 재시작하면 초기 샘플로 돌아갑니다.
+
+| 단계 | 수행할 작업 | 회원 상태 |
+|---|---|---|
+| 목록·상세 조회 | 기존 샘플을 조회합니다. | 회원 4명 |
+| 기본 등록 | 정혁을 한 번 등록합니다. | 회원 5명 |
+| 수정 | 등록한 정혁의 나이를 11로 바꿉니다. | 회원 5명, 정혁은 11살 |
+| 삭제 | 새로 등록한 정혁을 삭제합니다. | 기존 회원 4명 |
+| 삭제 제한 확인 | 게시글을 작성한 샘플 회원의 삭제를 시도합니다. | 삭제되지 않아 회원 4명 유지 |
 
 아래 실습의 [MemberController](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)는 MemberRepository와 ArticleRepository를 주입받습니다. 회원·게시글 엔티티 구조는 JPA 장과 같고, ArticleRepository.existsByMember()는 작성한 글이 있는지 확인할 때 사용합니다. 로그인 기능은 아직 없습니다.
+
+MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 목록·상세·등록·수정·삭제와 뒤의 검증 메서드를 모두 같은 클래스에서 살펴봅니다.
+
+```java
+@Controller
+@RequiredArgsConstructor
+public class MemberController {
+    private final MemberRepository memberRepository;
+    private final ArticleRepository articleRepository;
+}
+```
 
 ### 4.3.1 회원 목록·상세 화면
 
@@ -761,7 +810,23 @@ GET /members/new의 @ModelAttribute가 빈 객체를 준비합니다. 폼의 obj
 
 정혁 / JungHyuk@campus.com / 10으로 등록합니다.
 
-브라우저가 목록으로 이동하고 정혁이 추가됩니다. 브라우저 개발자 도구에서는 보통 등록 POST의 302 이동 응답과 뒤따르는 목록 GET의 200 응답을 볼 수 있습니다. 목록 새로고침은 새 등록을 반복하지 않습니다.
+등록이 끝나면 회원 목록에 다음 행이 추가됩니다. 아래 표는 예상 화면에서 확인할 값이며, ID에는 실제 DB가 생성한 값이 표시됩니다.
+
+| ID | 이름 | 이메일 | 나이 |
+|---|---|---|---|
+| 생성된 ID | 정혁 | JungHyuk@campus.com | 10 |
+
+목록에는 기존 회원을 포함해 5명이 표시됩니다. 브라우저 개발자 도구의 Network에서는 등록 POST의 302 응답과, 이어지는 목록 GET의 200 응답을 확인할 수 있습니다.
+
+이처럼 처리 후 다른 주소로 다시 요청하도록 안내하는 것을 리다이렉트라고 합니다. Model에 데이터를 넣고 템플릿을 바로 반환하는 경우와 달리 브라우저가 새 요청을 보냅니다. 목록 컨트롤러는 그 새 요청에서 DB를 다시 조회하고 Model을 준비합니다.
+
+| 순서 | 요청·응답 | 결과 |
+|---|---|---|
+| 1 | POST /members | 회원을 저장합니다. |
+| 2 | 302 이동 응답 | 브라우저에 /members를 다시 요청하도록 안내합니다. |
+| 3 | GET /members | 저장된 회원을 포함한 목록을 조회해 표시합니다. |
+
+등록 후 표시된 목록에서 새로고침하면 GET 조회만 반복됩니다. 앞의 DB 없는 폼 예제에서 POST 결과 화면을 바로 반환했을 때와 비교하면, 리다이렉트를 사용하는 이유를 이해할 수 있습니다.
 
 ### 4.3.3 회원 수정
 
@@ -884,7 +949,7 @@ public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAtt
 
 ### 4.4.1 MemberForm에 검증 규칙 선언
 
-폼 객체는 화면에서 입력받을 값과 검증 규칙을 모읍니다. DB 매핑용 엔티티와 구분하면 화면의 입력 조건을 따로 표현하기 쉽습니다.
+폼 객체는 화면에서 입력받을 값과 검증 규칙을 모읍니다. DB 컬럼의 NOT NULL은 null을 막지만, 공백만 있는 이름이나 이메일 형식까지 판단하지는 않습니다. MemberForm에 화면의 입력 조건을 선언하면 DB 매핑과 입력 검증을 구분할 수 있습니다.
 
 **실습 코드**
 
@@ -915,31 +980,29 @@ public class MemberForm {
     @NotNull(message = "나이를 입력하세요.")
     @Min(value = 0, message = "나이는 0 이상으로 입력하세요.")
     private Integer age;
-
-    /*
-     * 주요 Validation 애노테이션
-     * @NotNull: null을 허용하지 않는다. 빈 문자열과 공백은 허용한다.
-     * @NotEmpty: null과 빈 문자열·빈 컬렉션을 허용하지 않는다. 공백 문자열은 허용한다.
-     * @NotBlank: 문자열이 null이거나 비어 있거나 공백만 있으면 오류이다.
-     * @Size(min = 2, max = 20): 문자열 길이 또는 컬렉션·배열의 크기를 제한한다.
-     * @Email: 문자열이 이메일 형식인지 확인한다. 실제 존재하는 주소인지는 확인하지 않는다.
-     * @Min(0), @Max(150): 숫자의 최솟값과 최댓값을 제한한다. 경계값도 허용한다.
-     * @Positive: 0보다 큰 숫자만 허용한다.
-     * @PositiveOrZero: 0 이상의 숫자를 허용한다.
-     * @Pattern(regexp = "[0-9]+"): 숫자로만 된 문자열인지 확인한다. 정규식으로 규칙을 지정한다.
-     * @Past, @Future: 날짜·시간이 현재보다 과거인지, 미래인지 확인한다.
-     *
-     * @Size, @Email, 숫자·날짜·정규식 검증은 null을 허용하므로 필수값에는
-     * @NotNull 또는 문자열용 @NotBlank 등을 함께 사용한다.
-     * message는 검증 실패 시 표시할 문구이다.
-     * Controller의 입력 객체에 @Valid를 붙이면 선언한 검증 규칙을 확인한다.
-     */
 }
 ```
 
 **코드 설명**
 
-NotBlank는 null·빈 문자열·공백만 있는 문자열을 막습니다. Email은 이메일 형식을, Size는 문자열 길이를 확인합니다. 나이의 NotNull과 Min(0)은 필수 입력과 0 이상 조건입니다. Min이나 Email 등은 null 자체를 막는 규칙이 아니므로 필수 조건을 함께 사용합니다. 파일 마지막 주석은 자주 사용하는 다른 검증 애노테이션을 정리한 참고표입니다.
+NotBlank는 null·빈 문자열·공백만 있는 문자열을 막습니다. Email은 이메일 형식을, Size는 문자열 길이를 확인합니다. 나이의 NotNull과 Min(0)은 필수 입력과 0 이상 조건입니다. message는 검증에 실패했을 때 보여 줄 문구이며, Controller의 입력 객체에 @Valid를 붙여 규칙을 검사합니다.
+
+**참고: 자주 쓰는 Validation 애노테이션**
+
+| 애노테이션 | 검증 규칙 |
+|---|---|
+| @NotNull | null을 허용하지 않습니다. 문자열의 내용은 검사하지 않습니다. |
+| @NotEmpty | null과 빈 문자열·빈 컬렉션·빈 배열을 허용하지 않습니다. 공백 문자열은 허용합니다. |
+| @NotBlank | 문자열이 null이거나 비어 있거나 공백만 있으면 오류입니다. |
+| @Size(min = 2, max = 20) | 문자열 길이나 컬렉션·배열의 크기를 제한합니다. |
+| @Email | 이메일 형식을 검사합니다. 실제 존재하는 주소인지는 확인하지 않습니다. |
+| @Min(0), @Max(150) | 숫자의 최솟값·최댓값을 제한하며 경계값도 허용합니다. |
+| @Positive | 0보다 큰 숫자만 허용합니다. |
+| @PositiveOrZero | 0 이상의 숫자를 허용합니다. |
+| @Pattern(regexp = "[0-9]+") | 정규식과 일치하는 문자열인지 검사합니다. 예시는 숫자로만 된 문자열입니다. |
+| @Past, @Future | 날짜·시간이 현재보다 과거인지·미래인지 검사합니다. |
+
+@Size, @Email, 숫자·날짜·정규식 검증은 null을 허용합니다. 필수값이라면 @NotNull이나 문자열용 @NotBlank를 함께 사용합니다. 위 목록을 모두 외우기보다 현재 폼의 이름·이메일·나이 규칙부터 확인합니다.
 
 **실행과 예상 결과**
 
@@ -1032,9 +1095,19 @@ BindingResult는 검증 대상 매개변수 바로 뒤에 둡니다. rejectValue
 
 **실행과 예상 결과**
 
-기본 CRUD에서 등록한 정혁을 삭제한 뒤 검증 화면을 엽니다. 빈 이름·잘못된 이메일·음수 나이를 제출하고, 기존 샘플 이메일 중복도 확인합니다. 마지막으로 정상 정보로 등록합니다.
+기본 CRUD의 삭제 실습을 마쳐 기존 회원 4명만 남은 상태에서 검증 화면을 엽니다. 빈 이름·잘못된 이메일·음수 나이를 제출하고, 기존 샘플 이메일 중복도 확인합니다. 마지막으로 정혁 / JungHyuk@campus.com / 10을 입력해 정상 등록합니다.
 
-잘못된 입력은 같은 화면에서 한글 메시지와 기존 입력값이 보입니다. 정혁 / JungHyuk@campus.com / 10으로 정상 등록하면 목록으로 이동합니다. 기본 등록과 달리 자동 검증을 먼저 수행하는 차이를 확인합니다.
+잘못된 입력을 제출하면 다음 메시지가 각 입력칸 옆에 표시됩니다. novalidate가 브라우저의 형식 검증을 끄므로 서버가 만든 메시지를 확인할 수 있습니다.
+
+| 항목 | 제출할 값 | 예상 오류 메시지 |
+|---|---|---|
+| 이름 | 빈 문자열 | 이름을 입력하세요. |
+| 이메일 | wrong | 이메일 형식으로 입력하세요. |
+| 나이 | -1 | 나이는 0 이상으로 입력하세요. |
+
+이때 DB에 회원은 추가되지 않으며, 입력한 이메일과 나이는 화면에 남아 수정할 수 있습니다. 같은 템플릿을 바로 반환하므로 오류를 담은 BindingResult와 입력 객체를 다시 사용할 수 있습니다. 오류가 있을 때 리다이렉트하지 않는 이유도 여기에 있습니다.
+
+정상 정보로 제출하면 저장 후 목록으로 리다이렉트되고, 정혁을 포함한 회원 5명이 표시됩니다. 이후 게시글 조회는 회원 수를 바꾸지 않습니다. MVC 앱을 재시작하면 다시 회원 4명과 게시글 100개의 초기 상태가 됩니다.
 
 ## 4.5 게시글 조회와 페이징
 
@@ -1120,7 +1193,7 @@ public class ArticleService {
 
 **코드 설명**
 
-ArticleResponse는 제목·본문·날짜·작성자 이름을 담습니다. Service는 엔티티를 조회해 toResponse()로 변환합니다. findAll()은 Page.map()으로 내용만 바꾸고 페이지 메타 정보를 유지합니다. findById()가 결과를 찾지 못하면 NoSuchElementException으로 다음 공통 오류 처리에 연결합니다.
+ArticleResponse는 화면에서 사용할 제목·본문·날짜·작성자 이름을 담습니다. 서비스는 엔티티를 조회한 뒤 toResponse()로 이 값들을 옮깁니다. findAll()의 Page.map()은 목록의 각 엔티티를 DTO로 바꾸면서 전체 개수와 페이지 정보를 유지합니다. findById()에서 대상을 찾지 못하면 NoSuchElementException이 발생하며, 뒤에서 작성할 공통 오류 처리기가 이를 처리합니다.
 
 **실행과 예상 결과**
 
@@ -1227,7 +1300,7 @@ PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니�
 
 /articles에서 제목을 누르고 상세에서 목록으로 돌아옵니다.
 
-샘플 기준 전체 100개와 첫 10개가 보입니다. ID 내림차순이므로 새로 생성된 ID의 글부터 나옵니다. 각 제목의 상세에서 실제 작성자 이름과 본문을 확인합니다.
+샘플 기준으로 전체 게시글 수 100과 현재 페이지의 10개가 표시됩니다. 목록은 ID가 큰 글부터 정렬되며, 화면의 페이지 번호는 1부터 보입니다. 제목 링크를 열면 그 글의 작성자 이름과 본문을 확인할 수 있습니다. 화면 하단의 2를 누르면 주소의 page가 1로 바뀌고 다음 10개가 표시됩니다.
 
 ### 4.5.3 페이징 fragment 연결
 
@@ -1278,7 +1351,7 @@ PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니�
 
 **코드 설명**
 
-`pagination(page, baseUrl)`이 페이지 정보와 주소를 받습니다. 목록의 `common :: pagination(${'${page}'}, '/articles')`가 호출 위치입니다. #numbers.sequence(0, totalPages-1)은 페이지 번호 목록을 만듭니다. 화면에는 1을 더해 표시하고 현재 번호는 strong으로 굵게 표시합니다. 첫 페이지에서는 이전, 마지막에서는 다음 링크를 만들지 않습니다. 페이지가 하나도 없으면 번호 목록 생성을 건너뜁니다.
+`pagination(page, baseUrl)`이 페이지 정보와 주소를 받습니다. 목록의 `common :: pagination(${page}, '/articles')`가 호출 위치입니다. #numbers.sequence(0, totalPages-1)은 페이지 번호 목록을 만듭니다. 화면에는 1을 더해 표시하고 현재 번호는 strong으로 굵게 표시합니다. 첫 페이지에서는 이전, 마지막에서는 다음 링크를 만들지 않습니다. 페이지가 하나도 없으면 번호 목록 생성을 건너뜁니다.
 
 **실행과 예상 결과**
 
@@ -1290,9 +1363,9 @@ PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니�
 
 여러 Controller에서 같은 예외를 처리할 때 공통 처리기를 둘 수 있습니다. @ControllerAdvice는 공통 적용 범위, @ExceptionHandler는 처리할 예외 종류를 지정합니다. 오류 화면에 적는 숫자와 실제 HTTP 응답 상태는 다른 개념이므로 @ResponseStatus로 응답도 지정합니다.
 
-### 4.6.1 404·409·500 예외 처리
+### 4.6.1 400·404·409·500 예외 처리
 
-조회 대상 없음, DB 제약 위반, 예상하지 못한 오류를 구분해 같은 오류 화면에 전달합니다.
+숫자 변환 실패, 조회 대상 없음, DB 제약 위반, 예상하지 못한 오류를 구분해 같은 오류 화면에 전달합니다.
 
 **실습 코드**
 
@@ -1308,6 +1381,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.NoSuchElementException;
 
@@ -1315,6 +1389,15 @@ import java.util.NoSuchElementException;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleBadRequest(Model model) {
+        // /members/abc처럼 숫자인 ID에 문자를 보내면 400으로 응답한다.
+        model.addAttribute("status", 400);
+        model.addAttribute("message", "회원 ID 등 숫자로 입력해야 하는 값을 확인하세요.");
+        return "error";
+    }
 
     @ExceptionHandler(NoSuchElementException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -1371,13 +1454,23 @@ public class GlobalExceptionHandler {
 
 **코드 설명**
 
-회원·게시글 조회의 NoSuchElementException은 404입니다. DataIntegrityViolationException은 409로 바꿉니다. 그 밖에 이 처리기로 전달되는 Exception은 500입니다. DB 예외 전문은 로그에 남기고 화면에는 정해진 메시지를 표시합니다. 회원 등록 검증 버전의 BindingResult는 예외를 던지는 대신 원래 입력 화면에서 처리합니다.
+숫자로 받을 ID에 문자가 들어오면 MethodArgumentTypeMismatchException이 발생하며 400으로 응답합니다. 회원·게시글 조회의 NoSuchElementException은 404입니다. DataIntegrityViolationException은 409로 바꿉니다. 그 밖에 이 처리기로 전달되는 Exception은 500입니다. DB 예외 전문은 로그에 남기고 화면에는 정해진 메시지를 표시합니다. 회원 등록 검증 버전의 BindingResult는 예외를 던지는 대신 원래 입력 화면에서 처리합니다.
 
 **실행과 예상 결과**
 
-없는 ID의 회원·게시글을 조회합니다. 기본 회원 등록에서 기존 이메일로 등록해 DB 예외도 확인합니다. 브라우저 Network에서 상태 코드를 확인합니다.
+`/members/abc`, `/articles/abc`에 접속해 숫자 변환 오류를 확인하고, 없는 숫자 ID의 회원·게시글도 조회합니다. 기본 회원 등록에서 기존 이메일로 등록해 DB 예외도 확인합니다. 브라우저 Network에서 상태 코드를 확인합니다.
 
-없는 데이터는 404 화면, 기본 등록 이메일 중복은 409 화면입니다. 검증 등록의 이메일 중복은 입력 화면에서 고칠 수 있게 표시됩니다. 500은 예상치 못한 예외의 처리 코드이며 이 교재를 위해 앱에 고의 오류 URL을 추가할 필요는 없습니다.
+응답 상태와 화면에 표시된 내용은 다음 기준으로 비교합니다.
+
+| 상황 | HTTP 상태 | 표시할 내용 |
+|---|---|---|
+| /members/abc처럼 숫자 ID에 문자 전달 | 400 | 숫자로 입력할 값을 확인하도록 안내하는 오류 화면 |
+| 존재하지 않는 숫자 ID 조회 | 404 | 회원 또는 게시글을 찾을 수 없다는 오류 화면 |
+| 기본 등록에서 중복 이메일 저장 | 409 | DB 제약 위반을 안내하는 오류 화면 |
+| 검증 등록에서 잘못된 입력 또는 이메일 중복 | 200 | 입력값과 필드별 오류를 유지한 등록 화면 |
+| 예상하지 못한 서버 오류 | 500 | 공통 오류 화면 |
+
+검증 버전은 오류를 BindingResult로 확인하고 입력 화면을 다시 보여 주므로, 잘못된 입력이라고 해서 항상 400을 반환하는 것은 아닙니다. 500 처리는 예기치 못한 오류를 안내하기 위한 것이며, 이 실습을 위해 고의 오류 URL을 추가할 필요는 없습니다.
 
 ## 4.7 학습 확인
 
