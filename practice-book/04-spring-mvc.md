@@ -51,7 +51,7 @@ Thymeleaf는 HTML 템플릿에 데이터를 넣어 완성된 HTML을 만드는 �
 
 HTML의 h1·h2는 제목, p는 문단, a는 링크, table·tr·th·td는 표, form·input·button은 입력과 전송을 표현합니다. Thymeleaf의 th: 속성은 서버에서 처리한 후 최종 HTML을 만듭니다. 동적인 결과는 파일을 더블클릭하는 대신 서버 URL로 접속해 확인합니다.
 
-이 절의 [Member](../spring-thymeleaf/src/main/java/com/example/demo/model/Member.java)는 엔티티가 아닌 단순 화면용 객체입니다. Controller가 회원 네 명을 직접 준비하므로 DB는 필요하지 않습니다. templates/common.html의 상하단 조각은 이미 준비되어 있으며 4.1.8에서 설명합니다.
+이 절의 Member(`spring-thymeleaf/src/main/java/com/example/demo/model/Member.java`)는 엔티티가 아닌 단순 화면용 객체입니다. Controller가 회원 네 명을 직접 준비하므로 DB는 필요하지 않습니다. templates/common.html의 상하단 조각은 이미 준비되어 있으며 4.1.8에서 설명합니다.
 
 ### 4.1.1 Model과 화면 이름
 
@@ -422,6 +422,30 @@ GET /form은 빈 Member를 화면에 전달합니다. th:object로 이 객체를
 
 POST /form의 @ModelAttribute는 폼에서 보낸 이름·이메일·나이를 객체에 담습니다. 입력값을 객체 속성에 연결하는 과정을 바인딩이라고 합니다. 이 객체는 Model에도 들어가므로 결과 템플릿에서 다시 사용할 수 있습니다. 폼 입력을 받는 @ModelAttribute와 JSON 본문을 받는 @RequestBody는 입력 형식에 맞추어 구분합니다.
 
+**독립 예제: 일반 폼과 JSON의 전달 형식**
+
+같은 회원 정보를 보내더라도 일반 HTML 폼과 JSON 요청은 본문의 모양이 다릅니다. 파일 업로드가 없는 이 예제의 POST 폼은 기본적으로 `application/x-www-form-urlencoded` 형식을 사용하며, 입력칸의 `name`을 항목 이름으로 삼아 값을 보냅니다.
+
+| 구분 | 일반 HTML 폼 | 3장의 JSON 요청 |
+|---|---|---|
+| `Content-Type` | `application/x-www-form-urlencoded` | `application/json` |
+| 본문의 구성 | `항목=값`을 `&`로 연결합니다. | JSON 객체의 필드와 값으로 구성합니다. |
+| 객체로 받는 방법 | `@ModelAttribute`로 바인딩합니다. | `@RequestBody`와 메시지 변환기를 사용합니다. |
+
+다음은 이메일과 나이 두 항목만 발췌한 본문 비교 예제입니다. 첫 번째는 폼 데이터로, 이메일의 `@`는 `%40`으로 인코딩되어 전달될 수 있습니다.
+
+```text
+email=JungHyuk%40campus.com&age=10
+```
+
+같은 값을 JSON으로 보내면 다음과 같습니다. 이는 전달 형식을 비교하는 독립 예제이므로 기존 폼이나 Controller를 변경하거나 별도의 요청을 실행하지 않습니다.
+
+```json
+{"email":"JungHyuk@campus.com","age":10}
+```
+
+폼의 값은 문자열로 전달되며, 스프링이 `age`를 자바 객체의 `Integer` 타입에 맞추어 변환합니다. 폼을 POST로 전송한다고 해서 본문이 자동으로 JSON이 되는 것은 아니므로, 요청 형식에 맞는 매개변수 처리 방식을 사용합니다.
+
 **실행과 예상 결과**
 
 /form에서 정혁 / JungHyuk@campus.com / 10을 입력하고 버튼을 누릅니다.
@@ -581,7 +605,7 @@ CREATE TABLE IF NOT EXISTS article (
 
 **코드 설명**
 
-ddl-auto=none은 JPA의 별도 테이블 생성을 끕니다. 테이블 생성은 SQL이 담당하도록 역할을 정한 것입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원합니다. data.sql의 본문은 [공통 샘플](../spring-mvc/src/main/resources/data.sql)을 사용합니다. 회원 4명과 각 25개의 글을 준비합니다.
+ddl-auto=none은 JPA의 별도 테이블 생성을 끕니다. 테이블 생성은 SQL이 담당하도록 역할을 정한 것입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원합니다. data.sql의 본문은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 회원 4명과 각 25개의 글을 준비합니다.
 
 DB 내용을 직접 확인하고 싶다면 /h2-console을 사용할 수 있습니다. 실행 로그에 표시된 실제 jdbc:h2:mem:... 주소와 사용자 sa, 빈 비밀번호로 접속합니다. 화면 CRUD는 콘솔을 열지 않아도 실습할 수 있습니다.
 
@@ -610,7 +634,7 @@ spring-mvc를 새로 실행해 회원 4명과 게시글 100개가 준비된 상�
 | 삭제 | 새로 등록한 정혁을 삭제합니다. | 기존 회원 4명 |
 | 삭제 제한 확인 | 게시글을 작성한 샘플 회원의 삭제를 시도합니다. | 삭제되지 않아 회원 4명 유지 |
 
-아래 실습의 [MemberController](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)는 MemberRepository와 ArticleRepository를 주입받습니다. 회원·게시글 엔티티 구조는 JPA 장과 같고, ArticleRepository.existsByMember()는 작성한 글이 있는지 확인할 때 사용합니다. 로그인 기능은 아직 없습니다.
+아래 실습의 MemberController(`spring-mvc/src/main/java/com/example/demo/controller/MemberController.java`)는 MemberRepository와 ArticleRepository를 주입받습니다. 회원·게시글 엔티티 구조는 JPA 장과 같고, ArticleRepository.existsByMember()는 작성한 글이 있는지 확인할 때 사용합니다. 로그인 기능은 아직 없습니다.
 
 MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 목록·상세·등록·수정·삭제와 뒤의 검증 메서드를 모두 같은 클래스에서 살펴봅니다.
 
@@ -1093,6 +1117,18 @@ public String addValidation(@Valid @ModelAttribute("memberForm") MemberForm form
 
 BindingResult는 검증 대상 매개변수 바로 뒤에 둡니다. rejectValue의 첫 값 email은 오류가 생긴 필드, duplicate는 오류 코드, 마지막 문자열은 표시 문구입니다. hasErrors()면 같은 템플릿 이름을 반환해 입력 객체와 오류 정보를 유지합니다. th:errors가 해당 항목의 메시지를 출력합니다. novalidate는 브라우저의 내장 형식 검증을 끄고 서버 메시지를 관찰하기 위한 HTML 속성입니다.
 
+**타입 변환 오류와 검증 오류**
+
+`BindingResult`는 `@Valid`의 검증 결과뿐 아니라 폼 값을 객체에 바인딩할 때 발생한 오류도 담습니다. 서버는 문자열로 받은 나이를 먼저 `Integer`로 변환하고, 변환된 값이 `@Min(0)` 등의 조건을 만족하는지 검사합니다.
+
+| 서버에 전달된 값 | 처리 단계 | 결과 |
+|---|---|---|
+| `age=10` | 정수 변환 후 검증 | 정수 10으로 변환되고 나이 조건을 통과합니다. |
+| `age=-1` | 정수 변환 후 검증 | 정수 변환은 성공하지만 `@Min(0)` 검증에 실패합니다. |
+| `age=abc` | 타입 변환 | 정수로 변환하지 못해 `typeMismatch` 바인딩 오류가 기록됩니다. |
+
+마지막 행은 서버로 전달된 데이터를 가정한 독립 비교 예제로, 브라우저의 숫자 입력칸에 문자를 입력하는 실습은 아닙니다. 타입 변환 오류의 메시지는 애너테이션의 `message`와 다를 수 있지만, 현재 코드처럼 `hasErrors()`를 확인하면 저장하지 않고 입력 화면에서 오류를 안내할 수 있습니다.
+
 **실행과 예상 결과**
 
 기본 CRUD의 삭제 실습을 마쳐 기존 회원 4명만 남은 상태에서 검증 화면을 엽니다. 빈 이름·잘못된 이메일·음수 나이를 제출하고, 기존 샘플 이메일 중복도 확인합니다. 마지막으로 정혁 / JungHyuk@campus.com / 10을 입력해 정상 등록합니다.
@@ -1479,5 +1515,3 @@ public class GlobalExceptionHandler {
 - 기본 등록과 검증 등록에서 같은 이메일 중복이 어디서 처리되는지 설명합니다.
 - page=0이 화면의 1페이지인 이유를 말해 봅니다.
 - 화면에 404 숫자를 출력하는 것과 HTTP 404 상태를 설정하는 차이를 설명합니다.
-
-[목차](README.md) · [이전: 3장 RESTful API](03-restful-api.md) · [다음: 5장 Spring Security](05-spring-security.md)

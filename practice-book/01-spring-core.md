@@ -13,7 +13,7 @@
 - 인터페이스와 생성자 주입으로 객체를 연결한다.
 - 롬복으로 객체를 만들고, 로그로 실행 결과를 확인한다.
 
-**준비**: Java 21과 IntelliJ IDEA에서 [spring-core](../spring-core)를 엽니다. DB는 필요하지 않습니다. 이 장의 소스는 `com.example.demo` 패키지에 있습니다.
+**준비**: Java 21과 IntelliJ IDEA에서 `spring-core`를 엽니다. DB는 필요하지 않습니다. 이 장의 소스는 `com.example.demo` 패키지에 있습니다.
 
 ## 1.1 스프링 부트 프로젝트 이해하기
 
@@ -26,7 +26,7 @@ Spring Initializr에서 다음과 같이 설정하고 Dependencies에 **Lombok**
 
 ![Spring Core 프로젝트 생성 설정과 Lombok 의존성 선택](images/01-spring-core/spring-initializr.png)
 
-프로젝트 생성의 공통 설정과 압축 해제 방법은 [실습 환경과 진행 방법](README.md#실습-환경과-진행-방법)을 참고합니다. 생성한 프로젝트 폴더는 `spring-core`로 준비합니다.
+프로젝트 생성의 공통 설정과 압축 해제 방법은 교재 앞부분의 「실습 환경과 진행 방법」을 참고합니다. 생성한 프로젝트 폴더는 `spring-core`로 준비합니다.
 
 스프링은 객체를 만들고 연결하는 기능을 비롯해 애플리케이션 개발에 필요한 기반을 제공합니다. 스프링 부트는 함께 사용할 라이브러리를 묶어 제공하고, 프로젝트에 추가한 라이브러리와 설정을 바탕으로 실행 환경을 자동으로 구성합니다. 개발자는 필요한 기능을 선택한 뒤 애플리케이션의 동작을 작성하는 데 집중할 수 있습니다.
 
@@ -69,7 +69,19 @@ tasks.named('test') {
 }
 ```
 
-`implementation`은 실행 코드가 사용하는 라이브러리입니다. 롬복의 `annotationProcessor`는 컴파일 시 애노테이션을 읽어 코드를 생성하도록 연결합니다. IntelliJ에서 Gradle 프로젝트를 불러와 의존성 동기화를 마친 뒤 실습합니다.
+Gradle의 의존성 설정은 라이브러리를 컴파일과 실행 중 어느 단계에서 사용할지 구분합니다. 다음 표에서는 현재 프로젝트에 등장하는 설정과 이후 DB 실습에서 사용할 `runtimeOnly`를 비교합니다.
+
+| 설정 | 사용하는 시점과 역할 | 예 |
+|---|---|---|
+| `implementation` | 실행 코드의 컴파일과 실행에 사용합니다. | 스프링 부트 스타터 |
+| `compileOnly` | 실행 코드의 컴파일에만 사용하고 실행 의존성에는 포함하지 않습니다. | 롬복 애너테이션 |
+| `annotationProcessor` | 컴파일할 때 애너테이션을 처리하여 코드를 생성합니다. | 롬복 코드 생성기 |
+| `runtimeOnly` | 컴파일에는 필요하지 않고 실행할 때 사용합니다. | JDBC 드라이버 |
+| `testImplementation` | 테스트 코드의 컴파일과 실행에 사용합니다. | 테스트 스타터 |
+
+롬복을 `compileOnly`와 `annotationProcessor`에 각각 선언하는 것은 서로 다른 역할을 연결하기 위해서입니다. 전자는 소스에서 롬복 애너테이션을 사용할 수 있게 하고, 후자는 이를 읽어 생성자와 getter 등의 코드를 만듭니다. 생성된 코드로 실행하므로 이 예제에서는 실행 시 롬복 라이브러리가 필요하지 않습니다.
+
+`testCompileOnly`, `testAnnotationProcessor`, `testRuntimeOnly`는 같은 구분을 테스트 코드에 적용한 설정입니다. IntelliJ에서 Gradle 프로젝트를 불러와 의존성 동기화를 마친 뒤 실습합니다.
 
 ## 1.2 객체 생성과 의존성 주입
 
@@ -146,6 +158,33 @@ public class EspressoMachine implements CoffeeMachine {
 **직접 바꿔 보기**
 
 실습을 마친 뒤 `@Primary`를 에스프레소 머신으로 옮기고 앱을 재시작해 선택 결과를 비교합니다. 두 클래스에 동시에 붙이지 않습니다.
+
+**독립 예제: @Primary와 @Qualifier 비교**
+
+`@Primary`가 여러 후보 중 기본으로 선택할 빈을 정한다면, `@Qualifier`는 특정 주입 위치에서 사용할 후보를 한정합니다. 드립 머신을 기본으로 유지하면서 특정 카페에는 에스프레소 머신을 전달하고 싶을 때 사용할 수 있습니다.
+
+| 애너테이션 | 적용 위치 | 역할 |
+|---|---|---|
+| `@Primary` | 빈으로 등록할 클래스 등 | 단일 빈을 주입할 때 기본 우선순위를 지정합니다. |
+| `@Qualifier` | 주입받을 필드나 생성자 매개변수 등 | 주입할 빈의 후보를 이름이나 구분값으로 한정합니다. |
+
+다음은 필드에 `@Autowired`와 `@Qualifier`를 함께 지정하는 독립 예제입니다. 다음 절의 `SpringCafe`를 대체하거나 실습 프로젝트에 추가하지 않고, 필드 주입에서 특정 빈을 선택하는 방식만 비교합니다.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+@Component
+public class EspressoCafe {
+    // CoffeeMachine 후보 중 espressoMachine 빈을 이 필드에 주입한다.
+    @Autowired
+    @Qualifier("espressoMachine")
+    private CoffeeMachine coffeeMachine;
+}
+```
+
+기본 이름 생성 규칙에서 `EspressoMachine`의 빈 이름은 `espressoMachine`입니다. `@Autowired`는 필드에 의존성을 주입하도록 표시하고, `@Qualifier`는 해당 이름으로 후보를 한정하므로 드립 머신에 `@Primary`가 있어도 에스프레소 머신이 주입됩니다. 이 예제의 필드는 생성자로 초기화하지 않고 객체 생성 후 스프링이 값을 설정하므로 `final`을 붙이지 않습니다.
 
 ### 1.2.2 생성자로 커피 머신 주입받기
 
@@ -440,5 +479,3 @@ public void makeCoffee() {
 - final 필드와 @RequiredArgsConstructor가 생성자 주입으로 이어지는 이유는 무엇인가?
 - cafe와 cafe2의 `==` 비교는 true이고, cafe와 cafe3은 false인 이유는 무엇인가?
 - INFO 설정에서 TRACE가 보일 때 어느 설정부터 확인할 것인가?
-
-[목차](README.md) · [다음: 2장 데이터베이스 연동](02-database.md)

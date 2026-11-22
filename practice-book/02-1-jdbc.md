@@ -16,7 +16,7 @@ JDBC는 자바 프로그램이 DB에 SQL을 보내고 결과를 받기 위한 AP
 
 **데이터 상태**: 이 절에서는 조회만 수행하므로 회원 4명과 게시글 100개의 공통 샘플이 그대로 유지됩니다. 같은 DemoApplication을 여러 번 실행해도 데이터가 추가되지 않습니다.
 
-**준비**: [2장 공통 준비](02-database.md)를 완료한 뒤 spring-jdbc를 엽니다. 실습 코드는 [MemberRepository](../spring-jdbc/src/main/java/com/example/demo/repository/MemberRepository.java)에 있습니다. 현재 JDBC 프로젝트는 조회 두 가지를 구현합니다.
+**준비**: 2장 공통 준비를 완료한 뒤 spring-jdbc를 엽니다. 실습 코드는 MemberRepository(`spring-jdbc/src/main/java/com/example/demo/repository/MemberRepository.java`)에 있습니다. 현재 JDBC 프로젝트는 조회 두 가지를 구현합니다.
 
 ### 2.1.1 조회 결과를 담을 회원 객체
 
@@ -125,7 +125,15 @@ DemoApplication을 실행해 `모든 회원` 로그를 확인합니다.
 
 ### 2.1.3 ID로 회원 한 명 조회
 
-검색 조건이 있는 SQL은 값만 바꾸어 반복 사용할 수 있습니다. PreparedStatement는 SQL의 ?에 값을 바인딩합니다. 문자열을 직접 이어 붙여 SQL을 만들기보다 SQL 구조와 입력값을 구분할 수 있습니다.
+앞 절에서는 입력값이 없는 전체 조회 SQL을 `Statement`로 실행했습니다. 이번에는 조회할 회원 ID를 전달하기 위해, SQL을 미리 지정하고 실행할 때 필요한 값을 전달할 수 있는 `PreparedStatement`를 사용합니다. `Connection`의 `prepareStatement(sql)`을 호출하면 `PreparedStatement` 객체를 얻습니다.
+
+`PreparedStatement`는 같은 형태의 SQL을 값만 바꾸어 여러 번 실행할 때 유용합니다. 서버에서 준비한 SQL을 재사용하면 SQL 분석 등 반복적인 준비 비용을 줄여 성능을 높일 수 있으며, 실제 효과는 데이터베이스와 JDBC 드라이버의 설정 및 재사용 방식에 따라 달라집니다. 이번 예제는 호출할 때마다 연결을 열고 SQL을 한 번 실행한 뒤 연결을 닫으므로, 반복 실행에 따른 성능 향상을 확인하는 예제는 아닙니다.
+
+값이 들어갈 자리는 `?`로 표시하고, `setLong(1, id)`처럼 값을 연결하는데 이를 **파라미터 바인딩**이라고 합니다. 바인딩은 `WHERE`의 비교값뿐 아니라 `INSERT`의 저장값이나 `UPDATE`의 변경값에도 사용할 수 있습니다. SQL과 입력값을 분리하면 문자열 조합 실수를 줄이고, 입력값이 SQL 명령으로 해석되는 SQL 인젝션을 방지하는 데 도움이 됩니다.
+
+> **바인딩할 수 있는 대상**
+>
+> `?`에는 데이터 값을 바인딩할 수 있지만, 테이블 이름이나 컬럼 이름, `ASC`·`DESC` 같은 SQL 키워드는 바인딩할 수 없습니다. 예를 들어 `ORDER BY ?`에 `setString(1, "name")`으로 값을 전달해도 `name` 컬럼을 기준으로 정렬되지 않습니다. 정렬 기준을 동적으로 지정할 때는 미리 허용한 컬럼 이름과 정렬 방향 중에서 선택하여 SQL을 구성합니다.
 
 **실습 코드**
 
@@ -233,5 +241,3 @@ public class DemoApplication {
 - next()를 호출하기 전에 결과의 첫 행을 바로 읽지 않는 이유는 무엇인가요?
 - 파라미터의 첫 위치가 0인지 1인지 확인해 봅니다.
 - JDBC 조회에서 직접 작성했던 객체 변환을 다음 MyBatis 예제와 비교할 준비를 합니다.
-
-[목차](README.md) · [이전: 2장 공통 준비](02-database.md) · [다음: 2.2 MyBatis](02-2-mybatis.md)

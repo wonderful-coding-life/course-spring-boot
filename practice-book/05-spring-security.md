@@ -35,7 +35,7 @@ flowchart TD
     H -->|거절| J["비로그인: 로그인 화면으로 이동<br/>로그인했지만 권한 부족: 403"]
 ```
 
-인증 과정에서는 UserDetailsService로 회원을 조회하고 PasswordEncoder로 비밀번호를 확인합니다. 성공하면 이 예제는 세션에 로그인 정보를 보관합니다. 이후 상품 요청에서는 이메일·비밀번호를 다시 보내지 않고 세션 쿠키로 로그인 상태를 이어 갑니다. 인가 필터는 이 로그인 정보와 요청별 규칙을 사용해 접근을 판단합니다. 세부 흐름은 [폼 로그인](https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/form.html)과 [요청 인가](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html) 공식 문서에서도 확인할 수 있습니다.
+인증 과정에서는 UserDetailsService로 회원을 조회하고 PasswordEncoder로 비밀번호를 확인합니다. 성공하면 이 예제는 세션에 로그인 정보를 보관합니다. 이후 상품 요청에서는 이메일·비밀번호를 다시 보내지 않고 세션 쿠키로 로그인 상태를 이어 갑니다. 인가 필터는 이 로그인 정보와 요청별 규칙을 사용해 접근을 판단합니다. 세부 흐름은 폼 로그인(https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/form.html)과 요청 인가(https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html) 공식 문서에서도 확인할 수 있습니다.
 
 **학습 목표**
 
@@ -288,7 +288,20 @@ data.sql과 엔티티 필드, Repository 검색 조건을 대응시킵니다.
 
 해시는 비밀번호를 그대로 저장하지 않기 위한 단방향 변환입니다. 로그인 시 저장된 해시를 복호화하는 것이 아니라 입력값이 해시에 대응하는지 matches()로 확인합니다.
 
-이 장의 설정 메서드는 모두 같은 SecurityConfig 클래스 안에 들어갑니다. 다음은 메서드를 제외한 선언부입니다. @Configuration은 설정 클래스를 표시하고, 뒤에서 작성할 각 @Bean 메서드는 Security가 사용할 객체를 빈으로 등록합니다.
+이 장의 설정 메서드는 모두 같은 SecurityConfig 클래스 안에 들어갑니다. `@Configuration`은 설정 클래스를 표시하고, 뒤에서 작성할 각 `@Bean` 메서드는 Security가 사용할 객체를 빈으로 등록합니다.
+
+**@Component와 @Bean으로 객체 등록하기**
+
+1장에서는 `@Component`가 붙은 클래스를 탐색하여 빈으로 등록했습니다. 여기서는 `@Bean` 메서드가 반환하는 객체를 빈으로 등록하므로, 외부 라이브러리의 클래스를 수정하지 않고도 스프링이 관리하도록 구성할 수 있습니다.
+
+| 방식 | 작성 위치 | 이 교재의 예 |
+|---|---|---|
+| `@Component` | 직접 작성한 클래스에 붙입니다. | `SpringCafe`, 커피 머신 구현 클래스 |
+| `@Bean` | 객체를 반환하는 설정 메서드에 붙입니다. | `passwordEncoder()`, `userDetailsService()` |
+
+다음 `passwordEncoder()`에서 `new BCryptPasswordEncoder()`로 생성한 객체는 `@Bean` 메서드의 반환값이므로 스프링이 빈으로 관리합니다. 기본 빈 이름은 메서드 이름인 `passwordEncoder`이며, Spring Security는 등록된 인코더를 사용해 비밀번호를 확인합니다. 단순히 다른 메서드 안에서 `new`로 만든 객체까지 자동으로 빈이 되는 것은 아닙니다.
+
+다음은 메서드를 제외한 `SecurityConfig`의 선언부입니다. 이어지는 설정 메서드는 모두 이 클래스 안에 작성합니다.
 
 ```java
 @Configuration
@@ -500,6 +513,18 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 4. hasRole("ADMIN")은 ROLE_ADMIN 권한을 확인합니다. 문자열에 ROLE_를 다시 붙여 넘기지 않습니다.
 5. defaultSuccessUrl("/products", true)는 이전 요청과 관계없이 로그인 성공 시 목록으로 보냅니다.
 6. logoutSuccessUrl("/")은 실제 로그아웃 후 홈으로 보냅니다. 별도 exceptionHandling 설정은 없습니다.
+
+**역할 이름과 권한 문자열 비교**
+
+`hasRole`은 기본적으로 역할 이름 앞에 `ROLE_`를 붙여 권한을 확인하고, `hasAuthority`는 지정한 권한 문자열을 그대로 확인합니다. 다음 표의 첫 번째와 두 번째 조건은 같은 관리자 권한을 검사합니다.
+
+| 조건 | 확인하는 권한 문자열 |
+|---|---|
+| `hasRole("ADMIN")` | `ROLE_ADMIN` |
+| `hasAuthority("ROLE_ADMIN")` | `ROLE_ADMIN` |
+| `hasAuthority("ADMIN")` | `ADMIN`이므로 현재 샘플 계정의 권한과 다릅니다. |
+
+이 표는 두 검사 방식의 차이를 설명하는 독립 비교 예제로, 기존 접근 규칙은 변경하지 않습니다. ADMIN이라는 이름만으로 USER 역할까지 자동으로 부여되지는 않으며, 역할의 상하 관계를 사용하려면 별도 설정이 필요합니다. 현재 관리자가 상품 목록을 볼 수 있는 것은 `ROLE_USER`가 있어서가 아니라 목록 요청의 조건이 `authenticated()`이기 때문입니다.
 
 **실행과 예상 결과**
 
@@ -770,6 +795,10 @@ private Product findProduct(Long id) {
 
 현재 학습용 상품 예제의 삭제는 일반 링크를 눌러 GET으로 처리합니다. 3장의 REST DELETE와 4장의 회원 삭제 POST를 구분해 현재 Controller 매핑을 읽습니다.
 
+> **GET 삭제 예제의 범위**
+>
+> GET은 조회에 사용하는 방식이므로 실제 애플리케이션에서 삭제 같은 상태 변경 작업에 사용하지 않습니다. 현재 예제는 기존 링크와 접근 규칙의 동작을 관찰하기 위한 것이며, 실제 구현에서는 POST 폼이나 DELETE 요청으로 구성하고 해당 요청에 필요한 보안 검사를 적용합니다. 관리자 권한 검사를 통과한다는 사실만으로 GET 삭제가 CSRF 보호까지 받는 것은 아닙니다.
+
 **실습 코드**
 
 [ProductController.java — delete()](../spring-security/src/main/java/com/example/demo/controller/ProductController.java)
@@ -909,5 +938,3 @@ Controller가 직접 세션을 지우는 코드를 작성하지 않습니다. �
 - 해시를 직접 equals로 비교하지 않는 이유를 설명합니다.
 - 화면에서 관리 링크가 안 보이는 것만으로 서버 요청도 차단됐다고 할 수 있는지 생각해 봅니다.
 - 로그아웃 확인 GET과 실제 로그아웃 POST의 차이를 설명합니다.
-
-[목차](README.md) · [이전: 4장 Spring MVC](04-spring-mvc.md)

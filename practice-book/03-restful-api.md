@@ -7,7 +7,7 @@ RESTful API는 클라이언트가 HTTP 요청으로 서버의 데이터를 조�
 
 이 장은 Member로 기본 API를 만든 뒤 Article에서 Service와 DTO를 배웁니다. 여러 회원 가입을 묶는 트랜잭션을 실습하고, 마지막에 결과를 자동으로 검증하는 테스트를 작성합니다.
 
-**준비**: spring-rest를 열고 MariaDB 환경변수를 설정합니다. 공통 schema.sql·data.sql로 회원 4명과 게시글 100개를 준비합니다. DemoApplication을 실행하고 [members.http](../spring-rest/http/members.http), [articles.http](../spring-rest/http/articles.http)를 IDE에서 엽니다. 웹 앱을 동시에 같은 8080 포트로 실행하지 않습니다.
+**준비**: spring-rest를 열고 MariaDB 환경변수를 설정합니다. 공통 schema.sql·data.sql로 회원 4명과 게시글 100개를 준비합니다. DemoApplication을 실행하고 members.http(`spring-rest/http/members.http`), articles.http(`spring-rest/http/articles.http`)를 IDE에서 엽니다. 웹 앱을 동시에 같은 8080 포트로 실행하지 않습니다.
 
 ## 3.1 HTTP와 API의 기본 개념
 
@@ -83,7 +83,7 @@ Content-Type: application/json
 {"id":47,"name":"정혁","email":"JungHyuk@campus.com","age":10}
 ```
 
-헤더와 본문은 빈 줄로 구분합니다. Content-Type을 바꾸었다면 실제 본문도 그 형식에 맞게 작성해야 합니다. 헤더만 XML로 바꾼다고 JSON 본문이 XML로 바뀌지는 않습니다. 이러한 헤더와 상태 코드의 의미는 [HTTP 표준](https://www.rfc-editor.org/rfc/rfc9110.html)에 정의되어 있습니다.
+헤더와 본문은 빈 줄로 구분합니다. Content-Type을 바꾸었다면 실제 본문도 그 형식에 맞게 작성해야 합니다. 헤더만 XML로 바꾼다고 JSON 본문이 XML로 바뀌지는 않습니다. 이러한 헤더와 상태 코드의 의미는 HTTP 표준(https://www.rfc-editor.org/rfc/rfc9110.html)에 정의되어 있습니다.
 
 이 장의 응답 본문은 주로 JSON입니다. JSON은 객체를 `{ }`, 배열을 `[ ]`로 표현하며, 필드 이름과 값을 짝지어 데이터를 전달합니다. 서버는 Member 객체를 그대로 메모리 밖으로 보내는 대신 그 속성을 JSON으로 변환합니다. 클라이언트가 보낸 JSON을 자바 객체로 바꾸어 받는 것도 가능합니다.
 
@@ -122,6 +122,19 @@ Content-Type은 보내는 본문의 형식, Accept는 받고 싶은 응답 형�
 
 컨트롤러(Controller)는 웹 요청을 받는 진입점입니다. @RestController가 붙은 클래스에서 객체를 반환하면 그 값은 응답 본문으로 변환됩니다. Member 예제에서는 Repository를 직접 호출해 HTTP 요청과 CRUD 메서드가 어떻게 연결되는지 익힙니다.
 
+**클래스와 메서드의 요청 매핑**
+
+클래스의 `@RequestMapping("/members")`는 공통 경로를 지정하고, 각 메서드의 매핑은 그 뒤에 붙을 경로와 HTTP 메서드를 지정합니다. 같은 주소라도 HTTP 메서드가 다르면 서로 다른 처리 메서드로 연결할 수 있습니다.
+
+| 클래스의 공통 경로 | 메서드의 매핑 | 처리할 요청 |
+|---|---|---|
+| `/members` | `@GetMapping` | `GET /members` |
+| `/members` | `@GetMapping("/{id}")` | `GET /members/47` 등 |
+| `/members` | `@PostMapping` | `POST /members` |
+| `/members` | `@DeleteMapping("/{id}")` | `DELETE /members/47` 등 |
+
+`{id}`는 경로의 일부를 값으로 받는 자리이며, `@PathVariable`로 메서드 매개변수에 연결합니다. 여기서 47은 경로 구성을 설명하기 위한 값으로, 실제 요청에는 등록 응답에서 받은 ID를 사용합니다.
+
 **시작 상태와 실행 순서**
 
 회원 4명이 있고 정혁이 등록되지 않은 상태에서 시작합니다. 먼저 members.http의 요청 1로 전체 회원을 조회해 준비 상태를 확인합니다. 이어서 아래 순서대로 각 요청을 실행합니다. 등록 요청을 반복하면 같은 이메일의 중복 가입이 되므로, 절마다 정혁을 새로 만들지 않고 같은 회원을 이어서 사용합니다.
@@ -136,7 +149,7 @@ Content-Type은 보내는 본문의 형식, Accept는 받고 싶은 응답 형�
 | 삭제 | 8·9: 삭제·재조회 | 기존 회원 4명, 삭제한 ID 조회는 404 |
 | 이메일 검색 | 10: 샘플 회원 조회 | 기존 회원 4명 유지 |
 
-[MemberController](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이메일 검색만 추가합니다.
+MemberController(`spring-rest/src/main/java/com/example/demo/controller/MemberController.java`)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이메일 검색만 추가합니다.
 
 MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 뒤의 API 메서드는 이 클래스 안에 들어갑니다. MemberService는 일괄 가입 실습에서 사용합니다.
 
@@ -472,7 +485,7 @@ spring.web.error.include-message=always
 implementation 'tools.jackson.dataformat:jackson-dataformat-xml'
 ```
 
-현재 프로젝트는 Spring Boot 4와 Jackson 3을 사용하므로 `tools.jackson.dataformat` 그룹을 사용합니다. `com.fasterxml.jackson.dataformat:jackson-dataformat-xml`은 Jackson 2용 좌표입니다. 이 프로젝트에서는 위 의존성을 추가한 뒤 Gradle을 다시 불러오고 앱을 재시작합니다. XML 지원은 [Spring Boot 공식 문서](https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.write-xml-rest-service)에서도 확인할 수 있습니다.
+현재 프로젝트는 Spring Boot 4와 Jackson 3을 사용하므로 `tools.jackson.dataformat` 그룹을 사용합니다. `com.fasterxml.jackson.dataformat:jackson-dataformat-xml`은 Jackson 2용 좌표입니다. 이 프로젝트에서는 위 의존성을 추가한 뒤 Gradle을 다시 불러오고 앱을 재시작합니다. XML 지원은 Spring Boot 공식 문서(https://docs.spring.io/spring-boot/how-to/spring-mvc.html#howto.spring-mvc.write-xml-rest-service)에서도 확인할 수 있습니다.
 
 스프링 MVC의 메시지 변환기가 요청 본문을 자바 객체로, 반환된 객체를 응답 본문으로 바꿉니다. Content-Type으로 요청 본문을 읽을 형식을 판단하고 Accept를 참고해 응답 형식을 선택합니다. 따라서 MemberController의 등록·조회 메서드를 XML용으로 따로 만들 필요가 없습니다.
 
@@ -486,7 +499,7 @@ flowchart LR
 
 **시작 상태와 실행 순서**
 
-members.http의 삭제까지 마쳐 기존 회원 4명만 있는 상태에서 시작합니다. [members-xml.http](../spring-rest/http/members-xml.http)를 열고 요청 1~3을 순서대로 실행합니다. 정혁의 이메일이 이미 있으면 중복 등록이 되므로, 등록 요청을 반복하지 않고 조회와 삭제를 이어서 실행합니다.
+members.http의 삭제까지 마쳐 기존 회원 4명만 있는 상태에서 시작합니다. members-xml.http(`spring-rest/http/members-xml.http`)를 열고 요청 1~3을 순서대로 실행합니다. 정혁의 이메일이 이미 있으면 중복 등록이 되므로, 등록 요청을 반복하지 않고 조회와 삭제를 이어서 실행합니다.
 
 ```http
 @baseUrl = http://localhost:8080
@@ -625,6 +638,8 @@ public class ArticleResponse {
 ### 3.3.2 게시글 등록과 응답 변환
 
 요청은 Controller → Service → Repository 순서로 전달됩니다. 서비스는 작성자가 실제로 존재하는지 확인하고 게시글과 연결합니다. 먼저 두 클래스의 선언부와 필드를 확인합니다. 아래는 메서드를 제외한 발췌이며, 이어지는 메서드를 각각의 클래스 안에서 읽습니다.
+
+`@Service`는 1장에서 사용한 `@Component`처럼 클래스를 탐색하여 빈으로 등록하는 애너테이션이며, 해당 클래스가 서비스 계층임을 나타냅니다. 따라서 컨트롤러는 서비스를 직접 생성하지 않고 생성자로 주입받을 수 있습니다. 애너테이션을 붙이는 것만으로 업무 처리가 완성되는 것은 아니며, 실제 처리 내용은 서비스의 메서드에 작성합니다.
 
 ```java
 @RestController
@@ -1067,6 +1082,19 @@ Accept: application/json
 
 컨트롤러가 주입받은 서비스의 공개 메서드를 호출하면 스프링이 트랜잭션을 적용합니다. 첫 번째 정혁을 저장한 뒤 두 번째 회원을 기존 윤서준의 이메일로 저장하면 UNIQUE 제약 위반이 발생합니다. 이 예외를 메서드 안에서 처리하지 않고 밖으로 전달하므로 정혁의 가입도 취소됩니다.
 
+**트랜잭션의 적용 조건과 롤백 규칙**
+
+별도 설정이 없다면 스프링은 `RuntimeException`과 `Error`가 메서드 밖으로 전달될 때 트랜잭션을 롤백하며, 체크 예외는 기본 롤백 대상이 아닙니다. 이 예제의 DB 제약 위반은 런타임 예외로 전달되므로 전체 가입이 취소됩니다. 체크 예외에도 롤백이 필요하다면 `@Transactional(rollbackFor = Exception.class)`처럼 규칙을 지정할 수 있습니다.
+
+스프링은 기본적으로 실제 서비스 객체 앞에 호출을 중계하는 객체인 프록시를 두고, 그 프록시를 통과하는 호출에 트랜잭션을 적용합니다. 따라서 컨트롤러에서 주입받은 서비스를 호출하는 경우와 같은 서비스 객체 안에서 다른 메서드를 직접 호출하는 경우는 구분해야 합니다.
+
+| 호출 방식 | 기본 프록시 방식의 동작 |
+|---|---|
+| 컨트롤러가 주입받은 서비스의 `registerAll()` 호출 | 프록시가 `@Transactional`을 확인해 트랜잭션을 적용합니다. |
+| 같은 객체 안에서 `this.registerAll()` 호출 | 프록시를 거치지 않아 대상 메서드의 애너테이션이 새롭게 적용되지 않습니다. |
+
+같은 객체 안에서 호출하더라도 바깥 메서드에 이미 트랜잭션이 적용되어 있다면 그 트랜잭션 안에서 DB 작업을 수행할 수 있습니다. 여기서는 호출 구조에 따른 차이만 이해하고, 별도의 비교 메서드를 프로젝트에 추가하지 않습니다.
+
 현재 요청의 오류 응답은 500입니다. 이 실습에서는 응답 상태를 확인한 다음 회원 목록을 다시 조회해, 먼저 처리한 가입도 취소되었는지 확인하는 것이 중요합니다.
 
 **실행과 예상 결과**
@@ -1283,7 +1311,7 @@ MariaDB 환경변수를 설정하고 IntelliJ의 JUnit 실행기로 통합 테�
 
 **실습 코드**
 
-다음은 build.gradle에서 테스트 실행 조건을 지정하는 부분입니다. 공통 프로젝트 설정과 의존성은 파일 링크에서 확인할 수 있습니다.
+다음은 `build.gradle`에서 테스트 실행 조건을 지정하는 부분입니다. 공통 프로젝트 설정과 의존성은 `spring-rest/build.gradle`의 전체 내용을 확인합니다.
 
 [build.gradle — test 태스크 발췌](../spring-rest/build.gradle)
 
@@ -1315,5 +1343,3 @@ test 태스크의 excludeTags 'integration' 설정은 해당 태그의 테스트
 - 일괄 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.
 - Mockito의 가짜 Repository와 실제 Service를 구분합니다.
 - MockMvc 통합 테스트의 DB 준비가 단위 테스트와 다른 이유를 설명합니다.
-
-[목차](README.md) · [이전: 2.3 JPA](02-3-jpa.md) · [다음: 4장 Spring MVC](04-spring-mvc.md)

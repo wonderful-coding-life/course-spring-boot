@@ -5,19 +5,31 @@
 
 회원 정보를 자바 객체에만 보관하면 프로그램이 종료될 때 그 값도 사라집니다. 관계형 데이터베이스는 데이터를 테이블에 저장해 프로그램을 다시 실행한 뒤에도 사용할 수 있게 합니다. 회원 테이블의 한 행은 회원 한 명을 나타내고, 이름·이메일·나이 같은 속성은 컬럼으로 구분합니다. 자바 프로그램은 SQL을 실행해 이 데이터를 조회하거나 변경합니다.
 
-CRUD는 생성(Create), 조회(Read), 수정(Update), 삭제(Delete)의 네 가지 기본 작업입니다. 이 장에서는 같은 회원 데이터를 JDBC, MyBatis, JPA로 다루며 자바 코드와 DB 사이를 연결하는 방법을 익힙니다.
+CRUD는 생성(Create), 조회(Read), 수정(Update), 삭제(Delete)의 네 가지 기본 작업입니다. 데이터를 저장하고 활용하려면 자바 프로그램에서 이러한 작업을 데이터베이스에 요청해야 합니다.
+
+자바 프로그램에서 관계형 데이터베이스와 연동하는 방법은 다양합니다. SQL을 직접 실행하는 JDBC부터 객체의 저장과 조회를 지원하는 Spring Data JPA까지, 개발자가 작성하는 코드와 데이터 처리 방식에 따라 다음과 같은 기술을 사용할 수 있습니다.
+
+- **JDBC**는 자바에서 관계형 데이터베이스에 접근하기 위한 표준 API입니다. 개발자가 SQL을 작성하고, 데이터베이스 연결과 SQL 실행, 조회 결과를 자바 객체로 변환하는 코드를 직접 작성합니다.
+- **Spring JDBC**는 JDBC를 사용할 때 반복해서 작성하는 코드를 줄여 주는 스프링의 데이터 접근 기능입니다. `JdbcTemplate` 등을 사용하면 연결과 자원 정리, 예외 처리의 상당 부분을 맡길 수 있으며, 개발자는 SQL과 조회 결과를 객체로 변환하는 코드에 집중할 수 있습니다.
+- **Spring Data JDBC**는 객체와 테이블의 매핑 정보를 바탕으로 JDBC를 통한 데이터 저장과 조회를 지원합니다. 데이터 접근 기능을 정의하는 Repository 인터페이스를 작성하면 기본 CRUD 기능을 제공하므로, 기본 작업마다 SQL과 실행 코드를 직접 작성하는 수고를 줄일 수 있습니다.
+- **MyBatis**는 개발자가 작성한 SQL과 자바 메서드를 연결하고, 조회 결과를 객체로 변환해 주는 SQL 매핑 프레임워크입니다. SQL은 XML이나 애너테이션으로 직접 작성하면서, JDBC의 반복적인 실행 코드와 결과 변환 처리를 줄일 수 있습니다.
+- **Spring Data JPA**는 객체와 관계형 데이터베이스를 매핑하는 표준인 JPA를 Repository 방식으로 편리하게 사용하도록 지원합니다. 개발자는 엔티티의 매핑 정보와 Repository 인터페이스를 작성하며, Hibernate 같은 JPA 구현체가 매핑 정보를 바탕으로 필요한 SQL을 생성하고 실행합니다.
+
+이 장에서는 JDBC, MyBatis, Spring Data JPA를 사용해 같은 회원 데이터의 생성·조회·수정·삭제를 실습합니다. JDBC로 데이터 처리의 기본 흐름을 익힌 뒤, MyBatis와 Spring Data JPA를 사용하면서 직접 작성하는 코드가 어떻게 달라지는지 살펴봅니다.
 
 | 학습 단계 | 개발자가 주로 작성하는 것 | 프레임워크에 맡기는 것 |
 |---|---|---|
 | JDBC | 연결, SQL 실행, 조회 결과의 객체 변환 | JDBC 드라이버를 통한 DB 통신 |
 | MyBatis | SQL과 Mapper 인터페이스·매핑 | SQL 실행과 결과 매핑 지원 |
-| JPA | 엔티티와 Repository | 엔티티 매핑을 바탕으로 한 SQL 생성·실행 |
+| Spring Data JPA | 엔티티와 Repository | 기본 CRUD 구현과 JPA 구현체를 통한 SQL 생성·실행 |
 
-**이 장의 파일**
+**이 장의 실습 순서**
 
-- [2.1 JDBC](02-1-jdbc.md)
-- [2.2 MyBatis](02-2-mybatis.md)
-- [2.3 JPA](02-3-jpa.md)
+1. 2.1 JDBC
+2. 2.2 MyBatis
+3. 2.3 JPA
+
+공통 준비를 마친 뒤 JDBC, MyBatis, JPA 순서로 데이터베이스 연동을 실습합니다.
 
 **학습 전 준비**
 
@@ -38,7 +50,7 @@ CRUD는 생성(Create), 조회(Read), 수정(Update), 삭제(Delete)의 네 가�
 
 **공통 스키마 준비**
 
-빈 DB에서 [schema.sql](../spring-jpa/sql/schema.sql)을 먼저 실행합니다. JDBC·MyBatis·JPA·REST·MVC의 해당 SQL 파일 내용은 현재 동일합니다. JDBC·MyBatis에서는 member만 실습하고, article은 JPA 이후에 사용합니다.
+빈 DB에서 schema.sql(`spring-jpa/sql/schema.sql`)을 먼저 실행합니다. JDBC·MyBatis·JPA·REST·MVC의 해당 SQL 파일 내용은 현재 동일합니다. JDBC·MyBatis에서는 member만 실습하고, article은 JPA 이후에 사용합니다.
 
 [schema.sql](../spring-jpa/sql/schema.sql)
 
@@ -89,7 +101,7 @@ CREATE TABLE IF NOT EXISTS article (
 
 **샘플 데이터 실행 순서**
 
-[data.sql 전체 파일](../spring-jpa/sql/data.sql)을 UTF-8로 열어 같은 연결에서 한 번 실행합니다. 다음은 파일 중 회원 등록 부분입니다.
+data.sql 전체 파일(`spring-jpa/sql/data.sql`)을 UTF-8로 열어 같은 연결에서 한 번 실행합니다. 다음은 파일 중 회원 등록 부분입니다.
 
 [data.sql — 일부 발췌](../spring-jpa/sql/data.sql)
 
@@ -148,5 +160,3 @@ GROUP BY m.id, m.name;
 | 김도윤 | 25 |
 
 같은 MariaDB를 다음 모듈에서 이어 쓰면 data.sql을 다시 실행하지 않습니다. 다시 넣으면 이메일 중복으로 실패하거나 게시글이 추가될 수 있습니다. 실습은 각 기능을 실행하기 전에 필요한 데이터가 있는 상태에서 시작합니다. 새 회원은 정혁 / `JungHyuk@campus.com` / 10살을 사용합니다.
-
-[목차](README.md) · [이전: 1장](01-spring-core.md) · [다음: 2.1 JDBC](02-1-jdbc.md)

@@ -66,6 +66,7 @@ function Table([string[]]$rows) {
     $n = $all[0].Count
     $widths = switch ($n) { 2 { @(3300,6260) } 3 { @(2300,3500,3760) } 4 { @(1600,2550,2800,2610) } default { @(for ($k=0;$k -lt $n;$k++) {[int](9560/$n)}) } }
     if ($all[0][0] -match '실습 교재') { $widths = @(4200,5360) }
+    if ($all[0][0] -eq '설정' -and $n -eq 3) { $widths = @(2700,3300,3560) }
     if ($all[0][0] -eq '이름' -and $n -eq 3) { $widths = @(1900,6160,1500) }
     $b=[System.Text.StringBuilder]::new()
     [void]$b.Append('<w:tbl><w:tblPr><w:tblW w:w="9560" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>')
