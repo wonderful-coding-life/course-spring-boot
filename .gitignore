@@ -6,3 +6,16 @@
 
 # Logs
 *.log
+
+# Temporary tools and verification artifacts
+/tmp/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Microsoft Office temporary lock files
+~$*
+
+# Local project archive
+/springboot-lecture.zip
