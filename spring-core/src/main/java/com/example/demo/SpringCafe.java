@@ -19,8 +19,4 @@ public class SpringCafe {
         log.trace("사용하는 커피 머신: {}", coffeeMachine.getClass().getSimpleName());
         log.info("{}를 만들었습니다.", coffeeMachine.brew());
     }
-
-    public void orderCoffee(CoffeeOrder order) {
-        log.info("주문 정보: {}", order);
-    }
 }

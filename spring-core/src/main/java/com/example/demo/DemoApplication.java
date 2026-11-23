@@ -15,9 +15,6 @@ public class DemoApplication {
 		SpringCafe cafe = context.getBean(SpringCafe.class);
 		cafe.makeCoffee();
 
-		CoffeeOrder order = CoffeeOrder.builder().coffeeName("드립커피").quantity(3).build();
-		cafe.orderCoffee(order);
-
 		SpringCafe cafe2 = context.getBean(SpringCafe.class);
 		SpringCafe cafe3 = new SpringCafe(new DripCoffeeMachine());
 

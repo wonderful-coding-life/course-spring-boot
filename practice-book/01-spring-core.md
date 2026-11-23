@@ -217,9 +217,6 @@ public class SpringCafe {
         log.info("{}를 만들었습니다.", coffeeMachine.brew());
     }
 
-    public void orderCoffee(CoffeeOrder order) {
-        log.info("주문 정보: {}", order);
-    }
 }
 ```
 
@@ -315,9 +312,6 @@ public class DemoApplication {
 		SpringCafe cafe = context.getBean(SpringCafe.class);
 		cafe.makeCoffee();
 
-		CoffeeOrder order = CoffeeOrder.builder().coffeeName("드립커피").quantity(3).build();
-		cafe.orderCoffee(order);
-
 		SpringCafe cafe2 = context.getBean(SpringCafe.class);
 		SpringCafe cafe3 = new SpringCafe(new DripCoffeeMachine());
 
@@ -347,7 +341,6 @@ DemoApplication의 main 왼쪽 실행 버튼을 누릅니다. 프로젝트 폴�
 
 ```text
 드립 커피를 만들었습니다.
-주문 정보: CoffeeOrder(coffeeName=드립커피, quantity=3)
 cafe == cafe2 : true
 cafe == cafe3 : false
 ```
@@ -363,17 +356,15 @@ cafe와 cafe2는 컨테이너에서 같은 빈을 받은 변수입니다. cafe3�
 
 ### 1.3.1 주문 객체 만들기와 출력하기
 
-빌더는 필드 이름을 지정하며 객체를 만드는 방식입니다. 매개변수가 여러 개인 생성자보다 어떤 값을 넣는지 읽기 쉽습니다. `toString()`은 객체를 로그에 출력할 때 사람이 읽을 문자열을 제공합니다.
+`CoffeeOrder`는 커피 이름과 주문 수량을 담는 객체입니다. 이 예제에서는 롬복으로 빌더와 `toString()`을 생성하여 주문 객체를 만들고 출력합니다.
+
+빌더는 필드 이름을 지정하며 객체를 만드는 방식입니다. 매개변수가 여러 개인 생성자보다 어떤 값을 넣는지 읽기 쉽습니다.
 
 **실습 코드**
 
-[CoffeeOrder.java](../spring-core/src/main/java/com/example/demo/CoffeeOrder.java)
+다음은 주문 정보를 담는 클래스에 롬복 애노테이션을 적용한 예제입니다. 롬복이 생성하는 코드에 집중할 수 있도록 필요한 부분만 발췌했습니다.
 
 ```java
-package com.example.demo;
-
-import lombok.*;
-
 @Getter
 @Setter
 @ToString
@@ -386,12 +377,14 @@ public class CoffeeOrder {
 }
 ```
 
-[SpringCafe.java — orderCoffee()](../spring-core/src/main/java/com/example/demo/SpringCafe.java)
+다음과 같이 빌더로 주문 객체를 만들고 출력할 수 있습니다.
 
 ```java
-public void orderCoffee(CoffeeOrder order) {
-    log.info("주문 정보: {}", order);
-}
+CoffeeOrder order = CoffeeOrder.builder()
+        .coffeeName("드립커피")
+        .quantity(3)
+        .build();
+System.out.println("주문 정보: " + order);
 ```
 
 **코드 설명**
@@ -404,17 +397,17 @@ public void orderCoffee(CoffeeOrder order) {
 | `@Builder` | 필드를 지정해 객체를 만드는 빌더 |
 | `@ToString` | 필드 내용을 포함한 문자열 반환 메서드 |
 
-main의 `CoffeeOrder.builder().coffeeName(...).quantity(3).build()`가 주문을 만듭니다. 마지막 `build()`가 실제 주문 객체를 반환합니다.
+이 예제는 `@Builder`와 `@ToString`의 동작을 보여 주며, 나머지 애노테이션은 getter·setter와 생성자를 생성합니다.
 
-**실행과 예상 결과**
+`CoffeeOrder.builder()`로 빌더를 얻고, `coffeeName()`과 `quantity()`로 값을 지정합니다. 마지막 `build()`가 지정한 값을 담은 주문 객체를 반환합니다.
 
-main을 실행하고 주문 정보 로그를 확인합니다.
+**예상 결과**
 
-`주문 정보: CoffeeOrder(coffeeName=드립커피, quantity=3)` 형태로 출력됩니다.
+`"주문 정보: " + order`처럼 문자열에 객체를 연결하면 객체의 `toString()`이 호출됩니다. `@ToString`은 필드 이름과 값을 포함하는 `toString()`을 생성하므로 다음과 같이 출력됩니다.
 
-**직접 바꿔 보기**
-
-main의 주문 수량을 바꾸고 로그에서 변경된 값을 확인합니다.
+```text
+주문 정보: CoffeeOrder(coffeeName=드립커피, quantity=3)
+```
 
 ## 1.4 설정 파일과 로그
 

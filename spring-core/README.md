@@ -10,7 +10,7 @@
 | 인터페이스와 의존성 주입 | [CoffeeMachine](src/main/java/com/example/demo/CoffeeMachine.java), [SpringCafe](src/main/java/com/example/demo/SpringCafe.java) | 1.2.1 「의존성 주입」, 1.2.2 「제어의 역전」 | `SpringCafe`의 생성자 주입을 확인합니다. |
 | 빈 등록과 구현체 선택 | [DripCoffeeMachine](src/main/java/com/example/demo/DripCoffeeMachine.java), [EspressoMachine](src/main/java/com/example/demo/EspressoMachine.java) | 1.2.2 「제어의 역전」 | `@Component`, `@Primary`로 사용할 커피 머신을 정합니다. |
 | 컨테이너에서 객체 가져오기 | [DemoApplication](src/main/java/com/example/demo/DemoApplication.java) | 1.2.2 「제어의 역전」 | `getBean()`으로 가져온 객체와 `new`로 만든 객체를 비교합니다. |
-| 롬복과 생성자 주입 | [SpringCafe](src/main/java/com/example/demo/SpringCafe.java), [CoffeeOrder](src/main/java/com/example/demo/CoffeeOrder.java) | 2.2.1 「롬복」 | `@RequiredArgsConstructor`, getter·setter, builder 등을 주문 예제에 적용합니다. |
+| 롬복과 생성자 주입 | [SpringCafe](src/main/java/com/example/demo/SpringCafe.java) | 2.2.1 「롬복」 | `@RequiredArgsConstructor`를 생성자 주입에 적용합니다. |
 | 로그 출력과 레벨 | [SpringCafe](src/main/java/com/example/demo/SpringCafe.java) | 2.2.3 「로그 출력」 | `@Slf4j`로 INFO·DEBUG·TRACE 로그를 출력합니다. |
 | 로그 설정과 파일 저장 | [application.properties](src/main/resources/application.properties) | 2.2.2 「애플리케이션 설정」, 2.2.3 「로그 출력」 | 로그 레벨, 파일 이름, 로그 파일 교체와 보관 설정을 확인합니다. |
 
