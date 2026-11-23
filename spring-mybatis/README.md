@@ -8,12 +8,18 @@ JDBC에서 직접 처리했던 SQL 실행과 결과 매핑을 Mapper와 XML로 �
 | 학습 주제 | 주요 실습 코드 | 교재에서 찾아볼 곳 | 실습 내용 |
 |---|---|---|---|
 | 회원 데이터 준비 | [schema.sql](sql/schema.sql), [data.sql](sql/data.sql) | 3.1.1 「데이터베이스 준비」, 3.3.3 「예제 애플리케이션」 | JDBC와 같은 회원 4명을 사용합니다. |
-| Mapper 인터페이스 | [MemberMapper](src/main/java/com/example/demo/mapper/MemberMapper.java) | 3.3.1 「XML 기반 SQL 매핑」 | `@Mapper`가 붙은 인터페이스에 사용할 메서드를 선언합니다. |
+| Mapper 인터페이스 | [MemberMapper](src/main/java/com/example/demo/mapper/MemberMapper.java) | 3.3.1 「XML 기반 SQL 매핑」 | `@Mapper`가 붙은 인터페이스에 메서드를 선언하고, 입력 매개변수마다 `@Param`으로 SQL에서 사용할 이름을 지정합니다. |
 | CRUD SQL과 파라미터 | [MemberMapper.xml](src/main/resources/mapper/MemberMapper.xml) | 3.3.1 「XML 기반 SQL 매핑」 | 조회·등록·수정·삭제 SQL과 `#{}` 파라미터를 연결합니다. |
-| 조회 결과 매핑과 생성 ID | [Member](src/main/java/com/example/demo/model/Member.java), [MemberMapper.xml](src/main/resources/mapper/MemberMapper.xml) | 3.3.1 「XML 기반 SQL 매핑」 | `resultMap`, `useGeneratedKeys`, `keyProperty`를 확인합니다. |
-| 정렬 조건 전달 | [MemberMapper](src/main/java/com/example/demo/mapper/MemberMapper.java), [MemberMapper.xml](src/main/resources/mapper/MemberMapper.xml) | 3.3.1 「XML 기반 SQL 매핑」 | `@Param`과 `${}`로 정렬 조건을 전달합니다. XML의 SQL 인젝션 관련 주석도 함께 확인합니다. |
+| 조회 결과 매핑과 생성 ID | [Member](src/main/java/com/example/demo/model/Member.java), [MemberMapper.xml](src/main/resources/mapper/MemberMapper.xml) | 3.3.1 「XML 기반 SQL 매핑」 | `resultMap`으로 조회 결과를 매핑하고, `useGeneratedKeys`와 `keyProperty="member.id"`로 생성된 ID를 전달한 객체에 저장합니다. |
+| 동적 쿼리와 정렬 조건 | [MemberMapper](src/main/java/com/example/demo/mapper/MemberMapper.java), [MemberMapper.xml](src/main/resources/mapper/MemberMapper.xml) | 3.3.1 「XML 기반 SQL 매핑」 | `@Param`과 `${}`로 정렬 구문을 구성합니다. 실습 교재 2.2.7절에서 값 바인딩과 문자열 치환의 차이, SQL 인젝션 주의 사항을 확인합니다. |
 | DB와 Mapper 연결 설정 | [application.properties](src/main/resources/application.properties) | 3.3.1 「XML 기반 SQL 매핑」 | MariaDB 연결과 Mapper XML 탐색 위치를 지정합니다. |
 | 기능별 실행과 결과 확인 | [MemberMapperTests](src/test/java/com/example/demo/mapper/MemberMapperTests.java) | 3.3.3 「예제 애플리케이션」, 실행 문법은 4.3.1 「테스트 클래스 작성」 | 개별 `@Test` 메서드를 실행하고 한글 로그로 결과를 확인합니다. |
+
+## 매개변수 이름과 객체 속성
+
+입력 매개변수에는 `@Param`으로 SQL에서 사용할 이름을 지정합니다. 단일 값은 `@Param("email")`과 `#{email}`을 연결하고, 객체는 `@Param("member")`와 `#{member.email}`처럼 이름 뒤에 속성을 붙여 사용합니다.
+
+등록 SQL의 `keyProperty="member.id"`는 DB에서 생성한 ID를 전달한 `member` 객체의 `id`에 저장합니다. 따라서 `insert()`가 반환한 등록 행 수와 `member.getId()`로 확인하는 생성 ID를 구분합니다.
 
 ## 실행 방법
 

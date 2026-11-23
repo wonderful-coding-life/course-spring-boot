@@ -58,11 +58,11 @@ import java.util.List;
 @Mapper
 public interface MemberMapper {
     List<Member> findAll();
-    Member findById(Long id);
-    Member findByEmail(String email);
-    int insert(Member member);
-    int update(Member member);
-    int deleteById(Long id);
+    Member findById(@Param("id") Long id);
+    Member findByEmail(@Param("email") String email);
+    int insert(@Param("member") Member member);
+    int update(@Param("member") Member member);
+    int deleteById(@Param("id") Long id);
     List<Member> findAllOrderBy(@Param("order") String order, @Param("dir") String dir);
 }
 ```
@@ -90,7 +90,9 @@ mybatis.mapper-locations=classpath:mapper/*.xml
 
 **코드 설명**
 
-`@Mapper`는 MyBatis가 사용할 인터페이스를 표시합니다. `mybatis.mapper-locations`는 XML을 찾을 위치입니다. `resultMap`의 `column`은 조회 결과의 컬럼 이름, `property`는 `Member`의 자바 속성 이름입니다.
+`@Mapper`는 MyBatis가 사용할 인터페이스를 표시하고, `@Param`은 입력 매개변수를 SQL에서 사용할 이름과 연결합니다. 예를 들어 `@Param("email")`로 지정한 값은 XML에서 `#{email}`로 읽습니다.
+
+`mybatis.mapper-locations`는 XML을 찾을 위치입니다. `resultMap`의 `column`은 조회 결과의 컬럼 이름, `property`는 `Member`의 자바 속성 이름입니다.
 
 Member 모델(`spring-mybatis/src/main/java/com/example/demo/model/Member.java`)은 JDBC처럼 id·name·email·age를 담습니다. 인터페이스와 XML에서 철자가 다르면 호출할 SQL을 찾지 못합니다.
 
@@ -251,7 +253,9 @@ testFindById와 testFindByEmail을 각각 실행합니다.
 
 **SQL에서 사용할 매개변수 이름 지정하기**
 
-Mapper 인터페이스의 메서드 매개변수에 `@Param("이름")`을 붙이면 SQL에서 사용할 이름을 지정할 수 있습니다. 자바 매개변수 이름과 SQL에서 사용할 이름을 다르게 정할 때도 사용하며, `org.apache.ibatis.annotations.Param`을 import합니다. 다음은 매개변수 이름 지정 방식을 보여 주는 참고 예제입니다.
+Mapper 인터페이스의 메서드 매개변수에는 `@Param("이름")`으로 SQL에서 사용할 이름을 지정합니다. 사용하려면 `org.apache.ibatis.annotations.Param`을 import합니다.
+
+다음은 자바 매개변수 이름과 SQL에서 사용할 이름을 다르게 지정하는 독립 예제입니다. 기존 `findByEmail()`과 비교하기 위한 코드이므로 인터페이스에 중복해서 추가하지 않습니다.
 
 ```java
 Member findByEmail(@Param("email") String emailAddress);
@@ -261,9 +265,9 @@ Member findByEmail(@Param("email") String emailAddress);
 SELECT id, name, email, age FROM member WHERE email = #{email}
 ```
 
-이 경우 SQL에서는 자바 매개변수 이름인 `emailAddress` 대신 `@Param`에 지정한 `email`을 사용합니다. 현재처럼 String이나 Long 값 하나를 전달하는 단순 바인딩에서는 `@Param`을 생략할 수 있습니다.
+이 경우 SQL에서는 자바 매개변수 이름인 `emailAddress` 대신 `@Param`에 지정한 `email`을 사용합니다. 이 교재에서는 SQL과 자바 코드의 연결을 명확히 하기 위해 입력 매개변수마다 `@Param`으로 이름을 지정합니다.
 
-여러 매개변수를 전달할 때는 각각 `@Param`으로 이름을 지정하면 SQL에서 사용할 이름을 명확히 할 수 있습니다. 2.2.7절의 정렬 예제에서 이 방식을 확인합니다.
+여러 값을 전달할 때도 각 매개변수에 이름을 지정합니다. 2.2.7절의 정렬 예제에서는 `@Param("order")`와 `@Param("dir")`로 지정한 이름을 XML의 `${order}`와 `${dir}`에서 사용합니다.
 
 ### 2.2.4 회원 등록과 생성된 ID
 
@@ -274,8 +278,8 @@ SELECT id, name, email, age FROM member WHERE email = #{email}
 [MemberMapper.xml — insert](../spring-mybatis/src/main/resources/mapper/MemberMapper.xml)
 
 ```xml
-<insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO member (name, email, age) VALUES (#{name}, #{email}, #{age})
+<insert id="insert" useGeneratedKeys="true" keyProperty="member.id">
+        INSERT INTO member (name, email, age) VALUES (#{member.name}, #{member.email}, #{member.age})
     </insert>
 ```
 
@@ -301,7 +305,7 @@ void testInsertMember() {
 
 **코드 설명**
 
-`#{name}` 등은 전달한 Member의 속성을 읽습니다. `useGeneratedKeys="true"`는 DB가 만든 키를 받아오고 `keyProperty="id"`는 그 값을 같은 객체의 id에 넣습니다. insert()의 반환값 int는 ID가 아니라 영향받은 행 수입니다.
+`@Param("member")`로 이름을 지정했으므로 `#{member.name}`, `#{member.email}`, `#{member.age}`로 전달한 객체의 속성을 읽습니다. `useGeneratedKeys="true"`는 DB가 만든 키를 받아오고, `keyProperty="member.id"`는 그 값을 등록할 때 전달한 `member` 객체의 `id` 속성에 넣습니다. `insert()`의 반환값인 `int`는 생성된 ID가 아니라 영향받은 행 수입니다.
 
 회원을 등록한 뒤에는 생성된 ID로 해당 회원을 다시 조회하거나, 게시글을 저장할 때 작성자를 지정할 수 있습니다. 생성된 ID가 등록에 사용한 객체에 저장되므로, 이후 처리에서 `member.getId()`로 바로 사용할 수 있습니다.
 
@@ -329,7 +333,7 @@ testInsertMember를 개별 실행합니다. 테스트가 끝나면 등록이 취
 
 ```xml
 <update id="update">
-        UPDATE member SET name = #{name}, email = #{email}, age = #{age} WHERE id = #{id}
+        UPDATE member SET name = #{member.name}, email = #{member.email}, age = #{member.age} WHERE id = #{member.id}
     </update>
 ```
 
@@ -361,9 +365,9 @@ testUpdateMember를 단독 실행합니다.
 
 **객체의 프로퍼티를 SQL에 전달하기**
 
-현재 `update(Member member)`는 Member 객체 하나를 `@Param` 없이 전달합니다. 이 경우 SQL에서는 `#{name}`, `#{email}`, `#{age}`처럼 프로퍼티 이름만 사용합니다. 프로퍼티는 객체가 제공하는 속성이며, 예를 들어 `name`은 `getName()`으로 읽는 값에 해당합니다. 자바 매개변수 이름이 `member`라고 해서 자동으로 `#{member.name}`을 사용하는 것은 아닙니다.
+`update(@Param("member") Member member)`는 수정할 객체를 `member`라는 이름으로 SQL에 전달합니다. XML에서는 `#{member.name}`, `#{member.email}`, `#{member.age}`로 저장할 값을 읽고, `#{member.id}`로 수정할 행을 찾습니다.
 
-객체에 `@Param("member")`로 이름을 지정하면 SQL에서는 `#{member.name}`처럼 지정한 이름과 프로퍼티를 함께 사용합니다. 다음은 객체에 이름을 지정하는 방식을 보여 주는 참고 예제입니다.
+프로퍼티는 객체가 제공하는 속성이며, 예를 들어 `member.name`의 `name`은 `getName()`으로 읽는 값에 해당합니다. 다음은 앞의 수정 코드에서 매개변수 이름과 객체의 속성이 어떻게 연결되는지 정리한 예제입니다.
 
 ```java
 int update(@Param("member") Member member);
@@ -375,7 +379,7 @@ SET name = #{member.name}, email = #{member.email}, age = #{member.age}
 WHERE id = #{member.id}
 ```
 
-`@Param`을 붙이면 객체가 하나뿐이어도 지정한 이름을 붙여 `#{member.name}`처럼 접근합니다. 현재 실습에서는 기존의 `update(Member member)`와 `#{name}` 방식을 유지합니다.
+단일 값은 `#{email}`처럼 지정한 이름으로 접근하고, 객체는 `#{member.email}`처럼 이름 뒤에 속성을 붙여 접근합니다. 등록과 수정에서 같은 규칙을 사용하므로, 인터페이스의 `@Param` 이름과 XML의 참조 이름을 함께 확인합니다.
 
 ### 2.2.6 회원 삭제
 
@@ -423,9 +427,11 @@ testDeleteMember를 단독 실행합니다.
 
 삭제 행 수 1, 삭제 후 조회 결과 null, 초기 샘플 상태 기준 회원 수 4가 출력됩니다.
 
-### 2.2.7 정렬 조건과 파라미터 방식
+### 2.2.7 동적 쿼리: 정렬 조건 변경과 SQL 인젝션
 
-데이터 값과 SQL의 컬럼 이름은 성격이 다릅니다. ORDER BY의 컬럼 이름을 문자열 치환으로 넣는 예제를 통해 두 방식을 구분합니다.
+동적 쿼리는 실행할 때 전달한 조건에 따라 SQL의 일부를 구성하는 방식입니다. 이번 예제에서는 정렬할 컬럼과 방향을 매개변수로 받아 `ORDER BY` 구문을 바꾸며, 같은 조회 메서드로 서로 다른 정렬 결과를 얻습니다.
+
+이 절에서는 문자열 치환으로 정렬 구문을 구성하는 방법을 살펴보고, 외부 입력을 사용할 때 주의할 점을 함께 알아봅니다.
 
 **실습 코드**
 
@@ -453,7 +459,44 @@ void testFindAllOrderBy() {
 
 **코드 설명**
 
-`@Param("order")`, `@Param("dir")`로 두 인자의 이름을 지정합니다. `#{}`는 값 바인딩이지만 `${}`는 문자열을 SQL에 그대로 넣습니다. 현재 코드는 정해진 `id`, `desc`를 전달하는 학습 예제입니다. 사용자 입력을 그대로 전달하면 SQL 구조까지 바뀔 수 있으므로 실제 입력을 받는 경우 허용한 컬럼·정렬 방향만 선택하도록 해야 합니다.
+`@Param("order")`는 정렬할 컬럼을, `@Param("dir")`는 정렬 방향을 XML에서 사용할 이름과 연결합니다. `${order}`와 `${dir}`는 전달한 문자열로 치환되므로, 두 매개변수에 따라 다음과 같이 실행할 SQL이 달라집니다.
+
+| 전달할 값 | 구성되는 정렬 구문 | 조회 순서 |
+|---|---|---|
+| `"id"`, `"desc"` | `ORDER BY id desc` | ID가 큰 회원부터 조회합니다. |
+| `"age"`, `"asc"` | `ORDER BY age asc` | 나이가 적은 회원부터 조회합니다. |
+
+**값 바인딩과 문자열 치환의 차이**
+
+앞의 회원 조회에서는 `#{id}`나 `#{email}`로 데이터 값을 바인딩했습니다. 정렬할 컬럼 이름과 `ASC`·`DESC`는 데이터 값이 아니라 SQL 구문을 구성하는 요소이므로, 같은 방식으로 바인딩할 수 없습니다.
+
+| 표현 | 처리 방식 | 이 교재의 사용 예 |
+|---|---|---|
+| `#{...}` | SQL에 `?`를 두고 데이터 값을 바인딩합니다. | `WHERE email = #{email}` |
+| `${...}` | 전달한 문자열을 SQL에 직접 삽입합니다. | `ORDER BY ${order} ${dir}` |
+
+예를 들어 `ORDER BY #{order}`에 `"name"`을 전달해도 `name` 컬럼을 기준으로 정렬되지 않습니다. 이번 예제는 컬럼 이름과 정렬 방향을 SQL 구문에 넣기 위해 `${}`를 사용하지만, 외부 입력을 그대로 삽입하면 SQL의 의미가 바뀔 수 있으므로 주의해야 합니다.
+
+**주의: SQL 인젝션과 외부 입력**
+
+SQL 인젝션은 외부 입력이 SQL 명령의 일부로 해석되어, 개발자가 의도한 SQL의 동작을 바꾸는 공격입니다. `${}`는 전달한 문자열을 그대로 삽입하므로, 정렬 컬럼이나 방향에 사용자 입력을 직접 사용하면 정렬 이외의 SQL 구문까지 포함될 수 있습니다. `@Param`은 매개변수의 이름을 지정하는 기능이므로 문자열 치환을 안전하게 만들어 주지는 않습니다.
+
+현재 실습은 코드에 지정한 `"id"`와 `"desc"`를 전달합니다. 실제 사용자에게 정렬 조건을 받는 경우에는 컬럼을 `id`, `name`, `age`처럼 미리 정한 항목으로 제한하고, 정렬 방향도 `ASC`와 `DESC` 중에서만 선택하도록 해야 합니다.
+
+다음은 위험을 이해하기 위한 입력 문자열과 치환 결과의 예시이며, 실행하는 실습이 아닙니다. MariaDB에서 `order`에 `id; DROP TABLE member; #`이 전달되고 `dir`가 `desc`이면, SQL에 테이블 삭제 명령이 섞이고 `#` 뒤의 정렬 방향은 주석으로 처리됩니다.
+
+```sql
+SELECT id, name, email, age FROM member
+ORDER BY id; DROP TABLE member; # desc
+```
+
+이 예시에서 여러 명령이 실제로 실행되는지는 JDBC 드라이버의 다중 SQL 실행 설정과 DB 권한, 테이블 간 제약 조건 등에 따라 달라집니다. 다중 SQL 실행을 허용하지 않더라도 하나의 SQL 안에서 입력값이 구문을 바꿀 수 있으므로, 해당 설정만으로 SQL 인젝션을 막았다고 판단하지 않습니다.
+
+**정렬 조건을 안전하게 구성하는 방법**
+
+문자열 치환을 사용할 때는 서버에서 허용한 값인지 확인한 뒤 Mapper에 전달하고, 허용하지 않은 값은 거절하거나 정해진 기본값으로 처리합니다. 또 다른 방법으로는 MyBatis의 `<choose>`와 `<when>`을 사용해 미리 작성한 컬럼 이름과 정렬 방향 중 하나를 선택할 수 있습니다.
+
+동적 쿼리는 조건에 맞는 SQL을 구성하기 위한 기능이며, 주의해야 할 부분은 외부 입력을 SQL 구문에 그대로 사용하는 방식입니다. 데이터 값에는 `#{}`를 사용하고, 컬럼 이름이나 정렬 방향은 서버가 허용한 선택지로 제한한다는 기준으로 구분합니다.
 
 **실행과 예상 결과**
 
@@ -467,3 +510,4 @@ testFindAllOrderBy를 실행하고 ID 순서를 확인합니다. 이 실습에�
 - insert()의 반환값과 member.getId()의 차이를 설명합니다.
 - 현재 테스트 하나를 실행한 뒤 DB 값이 원래대로 돌아오는 이유를 설명합니다.
 - JDBC에서 직접 작성했던 while·ResultSet 변환 코드가 어디로 이동했는지 정리합니다.
+- `#{}`와 `${}`의 차이를 설명하고, 정렬 조건에 사용자 입력을 그대로 넣으면 어떤 문제가 생길 수 있는지 생각해 봅니다.
