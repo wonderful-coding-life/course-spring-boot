@@ -4,7 +4,7 @@
 <mapper namespace="com.example.demo.mapper.MemberMapper">
     <!-- 컬럼 이름과 프로퍼티 이름이 다르다면 둘 사이를 매핑할 수 있습니다 -->
     <resultMap id="memberResultMap" type="com.example.demo.model.Member">
-        <id column="id" property="id" />
+        <result column="id" property="id" />
         <result column="name" property="name" />
         <result column="email" property="email" />
         <result column="age" property="age" />

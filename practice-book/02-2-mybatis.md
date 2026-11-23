@@ -81,7 +81,7 @@ mybatis.mapper-locations=classpath:mapper/*.xml
 
 ```xml
 <resultMap id="memberResultMap" type="com.example.demo.model.Member">
-        <id column="id" property="id" />
+        <result column="id" property="id" />
         <result column="name" property="name" />
         <result column="email" property="email" />
         <result column="age" property="age" />
@@ -249,6 +249,22 @@ testFindById와 testFindByEmail을 각각 실행합니다.
 
 윤서준의 이메일과 이름이 출력됩니다. `missing@example.com` 조회는 null입니다. 샘플 회원이 없다면 먼저 공통 데이터를 준비합니다.
 
+**SQL에서 사용할 매개변수 이름 지정하기**
+
+Mapper 인터페이스의 메서드 매개변수에 `@Param("이름")`을 붙이면 SQL에서 사용할 이름을 지정할 수 있습니다. 자바 매개변수 이름과 SQL에서 사용할 이름을 다르게 정할 때도 사용하며, `org.apache.ibatis.annotations.Param`을 import합니다. 다음은 매개변수 이름 지정 방식을 보여 주는 참고 예제입니다.
+
+```java
+Member findByEmail(@Param("email") String emailAddress);
+```
+
+```sql
+SELECT id, name, email, age FROM member WHERE email = #{email}
+```
+
+이 경우 SQL에서는 자바 매개변수 이름인 `emailAddress` 대신 `@Param`에 지정한 `email`을 사용합니다. 현재처럼 String이나 Long 값 하나를 전달하는 단순 바인딩에서는 `@Param`을 생략할 수 있습니다.
+
+여러 매개변수를 전달할 때는 각각 `@Param`으로 이름을 지정하면 SQL에서 사용할 이름을 명확히 할 수 있습니다. 2.2.7절의 정렬 예제에서 이 방식을 확인합니다.
+
 ### 2.2.4 회원 등록과 생성된 ID
 
 등록 결과에는 실제 저장된 행 수와 DB가 부여한 ID가 있습니다. 등록에 성공했는지 관찰할 때 두 값을 함께 확인하면 좋습니다.
@@ -286,6 +302,8 @@ void testInsertMember() {
 **코드 설명**
 
 `#{name}` 등은 전달한 Member의 속성을 읽습니다. `useGeneratedKeys="true"`는 DB가 만든 키를 받아오고 `keyProperty="id"`는 그 값을 같은 객체의 id에 넣습니다. insert()의 반환값 int는 ID가 아니라 영향받은 행 수입니다.
+
+회원을 등록한 뒤에는 생성된 ID로 해당 회원을 다시 조회하거나, 게시글을 저장할 때 작성자를 지정할 수 있습니다. 생성된 ID가 등록에 사용한 객체에 저장되므로, 이후 처리에서 `member.getId()`로 바로 사용할 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -340,6 +358,24 @@ void testUpdateMember() {
 testUpdateMember를 단독 실행합니다.
 
 수정 전 나이는 10, 수정 후 나이는 11, 수정 행 수는 1입니다. 테스트가 끝나면 변경은 롤백됩니다.
+
+**객체의 프로퍼티를 SQL에 전달하기**
+
+현재 `update(Member member)`는 Member 객체 하나를 `@Param` 없이 전달합니다. 이 경우 SQL에서는 `#{name}`, `#{email}`, `#{age}`처럼 프로퍼티 이름만 사용합니다. 프로퍼티는 객체가 제공하는 속성이며, 예를 들어 `name`은 `getName()`으로 읽는 값에 해당합니다. 자바 매개변수 이름이 `member`라고 해서 자동으로 `#{member.name}`을 사용하는 것은 아닙니다.
+
+객체에 `@Param("member")`로 이름을 지정하면 SQL에서는 `#{member.name}`처럼 지정한 이름과 프로퍼티를 함께 사용합니다. 다음은 객체에 이름을 지정하는 방식을 보여 주는 참고 예제입니다.
+
+```java
+int update(@Param("member") Member member);
+```
+
+```sql
+UPDATE member
+SET name = #{member.name}, email = #{member.email}, age = #{member.age}
+WHERE id = #{member.id}
+```
+
+`@Param`을 붙이면 객체가 하나뿐이어도 지정한 이름을 붙여 `#{member.name}`처럼 접근합니다. 현재 실습에서는 기존의 `update(Member member)`와 `#{name}` 방식을 유지합니다.
 
 ### 2.2.6 회원 삭제
 
