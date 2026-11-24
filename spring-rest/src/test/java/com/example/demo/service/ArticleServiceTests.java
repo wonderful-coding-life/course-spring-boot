@@ -25,16 +25,17 @@ class ArticleServiceTests {
     @Mock
     private ArticleRepository articleRepository;
 
+    // 조회 테스트에서는 호출하지 않지만, Service의 생성자 의존성을 채우기 위해 준비한다.
     @Mock
     private MemberRepository memberRepository;
 
-    // 실제 Service 객체를 만들고 가짜 Repository들을 생성자로 주입한다.
+    // Mockito가 실제 Service 객체를 만들고 가짜 Repository들을 생성자로 주입한다.
     @InjectMocks
     private ArticleService articleService;
 
     @Test
     @DisplayName("게시글을 제목과 작성자 이름이 담긴 응답 DTO로 변환한다")
-    void findArticleById() {
+    void testFindArticleById() {
         // DB에 저장하지 않고 객체만 준비한다. ID도 테스트에서 직접 정한다.
         Member member = Member.builder()
                 .id(1L).name("정혁").email("JungHyuk@campus.com").age(10).build();

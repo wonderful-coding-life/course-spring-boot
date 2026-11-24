@@ -147,9 +147,9 @@ Content-Type은 보내는 본문의 형식, Accept는 받고 싶은 응답 형�
 | 전체 수정 | 4·5: 수정·재조회 | 정혁의 나이가 11로 변경 |
 | 부분 수정 | 6·7: 수정·재조회 | 이름이 정현으로 변경, 이메일 유지 |
 | 삭제 | 8·9: 삭제·재조회 | 기존 회원 4명, 삭제한 ID 조회는 404 |
-| 이메일 검색 | 10: 샘플 회원 조회 | 기존 회원 4명 유지 |
+| 이름 검색 | 10~12: 이름 검색·결과 없음·빈 조건 조회 | 일치하는 회원 배열·빈 배열·전체 회원 4명 |
 
-MemberController(`spring-rest/src/main/java/com/example/demo/controller/MemberController.java`)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이메일 검색만 추가합니다.
+MemberController(`spring-rest/src/main/java/com/example/demo/controller/MemberController.java`)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이름 검색만 추가합니다.
 
 MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 뒤의 API 메서드는 이 클래스 안에 들어갑니다. MemberService는 일괄 가입 실습에서 사용합니다.
 
@@ -171,12 +171,12 @@ package com.example.demo.repository;
 import com.example.demo.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import java.util.List;
 
 // 기본 CRUD는 JpaRepository의 findAll, findById, save, delete를 그대로 사용한다.
 public interface MemberRepository extends JpaRepository<Member, Long> {
-    // 이메일이 일치하는 회원을 조회한다. 없으면 빈 Optional을 반환한다.
-    Optional<Member> findByEmail(String email);
+    // 이름이 일치하는 회원을 조회한다. 동명이인이 있을 수 있으므로 목록으로 반환한다.
+    List<Member> findByName(String name);
 }
 ```
 
@@ -229,10 +229,15 @@ URL 안의 ID는 @PathVariable로 받습니다. Repository의 결과가 없으�
 [MemberController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members: 전체 회원을 조회한다.
+// GET /members?name=이름: 이름이 없으면 전체 회원을, 있으면 이름이 일치하는 회원을 조회한다.
 @GetMapping
-public List<Member> findAll() {
-    return memberRepository.findAll();
+public List<Member> findAll(
+        @RequestParam(name = "name", required = false) String name) {
+    // 생략한 값은 null이며, 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리한다.
+    if (name == null || name.isBlank()) {
+        return memberRepository.findAll();
+    }
+    return memberRepository.findByName(name);
 }
 ```
 
@@ -266,6 +271,8 @@ Accept: application/json
 **코드 설명**
 
 @GetMapping에 주소가 없으면 공통 주소 /members를 사용합니다. `/{id}`가 있으면 /members/실제ID입니다. 전체 조회는 List를 JSON 배열로, 단건 조회는 Member를 JSON 객체로 변환합니다. ResponseStatusException은 상태와 안내 사유를 전달합니다.
+
+목록 조회 메서드는 선택 조건인 name도 받습니다. 이 절에서는 조건 없이 전체 회원을 조회하며, 이름 조건에 따른 분기는 3.2.6절에서 실습합니다.
 
 **실행과 예상 결과**
 
@@ -420,29 +427,42 @@ members.http의 삭제와 삭제 후 조회를 순서대로 실행합니다.
 
 삭제 응답은 본문 없는 204입니다. 삭제한 ID를 다시 조회하면 404입니다. 404는 이 실습에서 의도한 확인 결과입니다.
 
-### 3.2.6 이메일 검색과 오류 사유
+### 3.2.6 선택적인 이름 검색과 오류 사유
 
-경로 변수는 /members/ID처럼 자원 위치를 표현하고, 쿼리 파라미터는 ?email=값처럼 검색 조건을 전달합니다.
+경로 변수는 /members/ID처럼 자원 위치를 표현하고, 쿼리 매개변수는 ?name=값처럼 목록의 검색 조건을 전달합니다. 이름 검색은 별도의 경로를 만들지 않고, 3.2.2절의 목록 조회 메서드에서 처리합니다.
 
 **실습 코드**
 
-[MemberController.java — findByEmail()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
+[MemberController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members/search?email=이메일: ? 뒤의 email 값을 받아 조회한다.
-@GetMapping("/search")
-public Member findByEmail(@RequestParam("email") String email) {
-    return memberRepository.findByEmail(email)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+// GET /members?name=이름: 이름이 없으면 전체 회원을, 있으면 이름이 일치하는 회원을 조회한다.
+@GetMapping
+public List<Member> findAll(
+        @RequestParam(name = "name", required = false) String name) {
+    // 생략한 값은 null이며, 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리한다.
+    if (name == null || name.isBlank()) {
+        return memberRepository.findAll();
+    }
+    return memberRepository.findByName(name);
 }
 ```
 
-[members.http — 요청 10](../spring-rest/http/members.http)
+[members.http — 요청 10~12](../spring-rest/http/members.http)
 
 ```http
-### 10. 이메일로 샘플 회원 조회 (200 OK)
-# ?email=값을 @RequestParam("email")으로 받는다. 등록한 정혁과 관계없이 실행할 수 있다.
-GET {{baseUrl}}/members/search?email=SeojunYoon@campus.com
+### 10. 이름으로 샘플 회원 검색 (200 OK)
+# name은 선택 조건이다. 이름이 정확히 일치하는 회원을 배열로 반환한다.
+GET {{baseUrl}}/members?name=윤서준
+Accept: application/json
+
+### 11. 검색 결과가 없는 이름 조회 (200 OK, 빈 배열)
+GET {{baseUrl}}/members?name=없는이름
+Accept: application/json
+
+### 12. 빈 이름으로 전체 회원 조회 (200 OK)
+# name을 생략하거나 빈 값·공백으로 보내면 전체 회원을 반환한다.
+GET {{baseUrl}}/members?name=
 Accept: application/json
 ```
 
@@ -451,7 +471,7 @@ Accept: application/json
 ```properties
 spring.application.name=demo
 
-# 실행과 테스트 모두 DB_URL에 지정한 MariaDB를 사용한다.
+# 앱 실행에는 DB_URL에 지정한 MariaDB를, 테스트에는 src/test/resources의 H2 설정을 사용한다.
 # sql/schema.sql과 sql/data.sql을 먼저 직접 실행해 테이블과 샘플 데이터를 준비한다.
 spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USER}
@@ -464,13 +484,15 @@ spring.web.error.include-message=always
 
 **코드 설명**
 
-@RequestParam("email")이 URL의 email 값을 받습니다. spring.web.error.include-message=always는 예외 사유를 오류 응답의 message에 포함하도록 합니다. 기본적으로 메시지 노출이 제한되는 이유는 내부 정보가 섞일 수 있기 때문입니다.
+`@RequestParam(name = "name", required = false)`는 URL의 name 값을 받으며, 매개변수를 생략하면 null이 들어옵니다. 이 예제는 빈 문자열이나 공백도 조건이 없는 것으로 처리하여 전체 회원을 조회합니다. 이름이 있으면 findByName()으로 정확히 일치하는 회원을 조회하며, 동명이인이 있을 수 있으므로 결과를 항상 목록으로 반환합니다.
+
+목록 검색은 조건에 맞는 회원이 없어도 정상적으로 처리한 것이므로 200과 빈 배열을 반환합니다. 반면 /members/ID로 특정 회원을 조회할 때 해당 ID가 없으면 404로 응답합니다. spring.web.error.include-message=always는 이때 예외 사유를 오류 응답의 message에 포함하도록 합니다. 기본적으로 메시지 노출이 제한되는 이유는 내부 정보가 섞일 수 있기 때문입니다.
 
 **실행과 예상 결과**
 
-샘플 이메일 검색을 실행합니다. 이어서 등록되지 않은 이메일로 바꾸어 비교합니다.
+members.http의 요청 10~12를 순서대로 실행합니다. 요청 1처럼 name을 생략한 전체 조회와도 비교합니다.
 
-등록된 이메일로 조회하면 서버는 상태 코드 200과 회원 정보를 JSON으로 응답합니다. 등록되지 않은 이메일로 조회하면 404와 `회원을 찾을 수 없습니다.`라는 오류 사유가 표시됩니다. 오류 응답에서도 상태 코드와 message를 함께 읽습니다.
+이름이 윤서준인 회원을 검색하면 200과 해당 회원이 담긴 배열을, 없는 이름을 검색하면 200과 빈 배열 []을 받습니다. 빈 이름으로 조회하면 기존 회원 4명이 반환됩니다. 이어서 요청 9로 이미 삭제한 회원의 ID를 다시 조회하여, 404와 `회원을 찾을 수 없습니다.`라는 오류 사유를 확인합니다.
 
 ### 3.2.7 헤더로 JSON·XML 형식 선택하기
 
@@ -1107,7 +1129,7 @@ Accept: application/json
 
 | 정리 순서 | 실행할 요청 | 확인할 결과 |
 |---|---|---|
-| 1 | GET /members/search?email=JungHyuk@campus.com | 남아 있는 정혁의 실제 ID |
+| 1 | GET /members?name=정혁 | 결과 배열에서 이메일이 JungHyuk@campus.com인 회원의 실제 ID |
 | 2 | DELETE /members/조회한ID | 응답 본문 없는 204 |
 | 3 | GET /members | 기존 회원 4명 |
 
@@ -1118,9 +1140,161 @@ Accept: application/json
 
 앞 장의 로그는 사람이 읽어 결과를 판단했습니다. 자동 검증은 예상값과 실제값이 다르면 테스트를 실패하게 합니다. 통합 테스트는 실제 여러 계층을 연결하고, 단위 테스트는 확인할 대상을 좁혀 주변 의존성을 가짜로 대체할 수 있습니다.
 
-이 절은 Service 단위 테스트 한 개와 게시글 단건 조회 통합 테스트 한 개에 집중합니다. 테스트 데이터가 서로 다릅니다. 단위 테스트는 객체를 직접 만들고, 통합 테스트는 준비된 MariaDB를 사용합니다.
+먼저 회원 Repository로 테스트 실행 순서와 검증 문법을 익힌 뒤, Mockito를 사용하는 Service 단위 테스트와 MockMvc를 사용하는 HTTP 통합 테스트를 실습합니다. Spring 테스트는 테스트용 H2에 필요한 데이터를 직접 준비하며, Mockito 단위 테스트는 DB를 사용하지 않습니다.
 
-### 3.5.1 Mockito와 assertThat으로 Service 검증
+### 3.5.1 테스트용 H2 데이터베이스 준비
+
+앱을 실행할 때는 MariaDB를 사용하지만 Spring 테스트에서는 메모리 H2를 사용합니다. 테스트에서 src/test/resources/application.properties를 읽도록 별도의 설정 파일을 두므로, 실습용 MariaDB 서버나 DB 환경변수 없이 실행할 수 있습니다. 실행용 src/main/resources/application.properties와 파일 위치를 구분합니다.
+
+[build.gradle — 테스트 의존성 추가](../spring-rest/build.gradle)
+
+```groovy
+// 테스트에서는 별도 DB 서버 없이 메모리 DB를 사용한다.
+testRuntimeOnly 'com.h2database:h2'
+```
+
+[테스트용 application.properties](../spring-rest/src/test/resources/application.properties)
+
+```properties
+# Spring 테스트에서는 실행용 MariaDB 대신 메모리 H2를 사용한다.
+spring.datasource.url=jdbc:h2:mem:spring-rest-test
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+# 컨텍스트 시작과 종료 시 테이블을 생성하고 제거한다.
+# 각 테스트의 데이터 준비와 삭제는 테스트 코드에서 수행한다.
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=false
+```
+
+create-drop은 Spring 테스트 컨텍스트가 시작될 때 엔티티를 기준으로 테이블을 만들고, 종료할 때 제거하는 설정입니다. 각 테스트 사이의 데이터 준비와 삭제는 다음 절의 @BeforeEach와 @AfterEach에서 수행합니다. H2는 테스트용 DB이며, 기존 MariaDB의 데이터나 자동 증가 ID를 공유하지 않습니다.
+
+현재 회원 이메일의 NOT NULL·UNIQUE 제약은 MariaDB 실습용 schema.sql에 정의되어 있습니다. 엔티티로 생성한 H2 테이블에 이 SQL의 모든 제약이 재현되는 것은 아니므로, 이번 테스트는 조회 결과와 테스트 문법을 확인하는 범위로 한정합니다. 이메일 중복과 트랜잭션 롤백은 앞 절의 MariaDB HTTP 실습에서 확인합니다.
+
+### 3.5.2 회원 Repository로 기본 문법 익히기
+
+> **본 교재 참고**
+> 4.3.1 「테스트 클래스 작성」
+
+앞선 JPA 실습에서는 로그를 읽어 결과를 확인했습니다. 이번에는 실제 Repository로 회원을 조회하고, assertThat() 뒤에 조건을 연결하여 예상한 결과인지 자동으로 검증합니다. CRUD 전체를 다시 구현하는 대신 테스트의 준비·실행·정리와 기본 검증 문법에 집중합니다.
+
+**실습 코드**
+
+[MemberRepositoryTests.java](../spring-rest/src/test/java/com/example/demo/repository/MemberRepositoryTests.java)
+
+```java
+package com.example.demo.repository;
+
+import com.example.demo.entity.Member;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+// 실제 Repository와 H2를 사용하며, 테스트 기본 문법과 검증 방법을 익힌다.
+@SpringBootTest
+class MemberRepositoryTests {
+    @Autowired
+    private MemberRepository memberRepository;
+
+    @BeforeEach
+    void setUp() {
+        // 각 테스트가 같은 데이터로 시작하도록 기본 회원 4명을 준비한다.
+        memberRepository.save(Member.builder()
+                .name("윤서준").email("seojun@example.com").age(20).build());
+        memberRepository.save(Member.builder()
+                .name("윤광철").email("kwangcheol@example.com").age(43).build());
+        memberRepository.save(Member.builder()
+                .name("공미영").email("miyoung@example.com").age(23).build());
+        memberRepository.save(Member.builder()
+                .name("김도윤").email("doyoon@example.com").age(19).build());
+    }
+
+    @AfterEach
+    void tearDown() {
+        // 자동 롤백 대신 직접 삭제하여 다음 테스트에 데이터를 남기지 않는다.
+        memberRepository.deleteAll();
+    }
+
+    @Test
+    @DisplayName("전체 회원 목록에는 준비한 회원 4명이 있다")
+    void testFindAllMembers() {
+        List<Member> members = memberRepository.findAll();
+
+        assertThat(members).isNotEmpty();
+        assertThat(members).hasSize(4);
+        assertThat(memberRepository.count()).isEqualTo(4L);
+    }
+
+    @Test
+    @DisplayName("이름으로 검색한 회원의 정보를 확인한다")
+    void testFindMembersByName() {
+        List<Member> members = memberRepository.findByName("윤서준");
+
+        assertThat(members).hasSize(1);
+
+        Member found = members.getFirst();
+        assertThat(found.getId()).isNotNull();
+        assertThat(found.getName()).isEqualTo("윤서준");
+        assertThat(found.getAge()).isGreaterThanOrEqualTo(20);
+        assertThat(memberRepository.existsById(found.getId())).isTrue();
+    }
+
+    @Disabled("추가 실습: 애너테이션을 제거하고 빈 검색 결과를 확인합니다.")
+    @Test
+    @DisplayName("없는 이름을 검색하면 빈 목록을 반환한다")
+    void testFindMembersByMissingName() {
+        List<Member> members = memberRepository.findByName("없는이름");
+
+        assertThat(members).isEmpty();
+    }
+}
+```
+
+**코드 설명**
+
+| 문법 | 역할 |
+|---|---|
+| @SpringBootTest | 스프링 컨테이너를 준비하여 실제 Repository를 사용합니다. |
+| @Autowired | 스프링이 관리하는 Repository를 주입받습니다. |
+| @BeforeEach | 각 테스트 전에 기본 회원 4명을 저장합니다. |
+| @Test | 실행할 테스트 메서드를 지정합니다. |
+| @AfterEach | 각 테스트 후 회원을 삭제하여 다음 테스트에 데이터를 남기지 않습니다. |
+| @DisplayName | 테스트 실행 창에 표시할 설명을 지정합니다. |
+| @Disabled | 사유와 함께 테스트 실행을 건너뜁니다. 클래스에도 적용할 수 있습니다. |
+
+활성 테스트마다 setUp() → 테스트 메서드 → tearDown() 순서로 실행됩니다. 테스트 메서드에 @Disabled가 붙어 있으면 해당 테스트와 그 테스트의 @BeforeEach·@AfterEach는 실행하지 않습니다. 두 활성 테스트의 실행 순서는 가정하지 않으며, 준비와 정리를 반복하므로 각각 같은 회원 4명을 대상으로 검증합니다.
+
+이 클래스에는 @Transactional을 붙이지 않습니다. 자동 롤백 대신 @AfterEach에서 회원을 직접 삭제하여 준비와 정리 메서드의 역할을 확인합니다. 테이블 생성과 제거는 컨텍스트 단위이며, 회원 데이터의 준비와 삭제는 테스트 메서드 단위라는 차이를 구분합니다.
+
+assertThat(실제값) 뒤에는 값의 자료형에 맞는 검증 메서드를 연결합니다. 이 예제는 문법을 익히기 위해 목록의 존재·크기, 회원 정보, 숫자 범위와 boolean 결과를 함께 확인합니다. 조건이 다르면 예외가 발생하여 테스트가 실패하므로 결과를 판단하기 위한 로그는 출력하지 않습니다.
+
+| 검증 문법 | 예제에서 확인하는 내용 |
+|---|---|
+| isNotEmpty() | 전체 회원 목록이 비어 있지 않은가 |
+| hasSize(4) | 회원 목록에 4명이 있는가 |
+| isEqualTo(4L) | count()가 반환하는 long 값이 4인가 |
+| isNotNull() | 저장한 회원에게 ID가 생성되었는가 |
+| isEqualTo("윤서준") | 검색한 회원의 이름이 예상값과 같은가 |
+| isGreaterThanOrEqualTo(20) | 검색한 회원의 나이가 20 이상인가 |
+| isTrue() | 해당 ID의 회원이 존재하는가 |
+| isEmpty() | 없는 이름의 검색 결과가 비어 있는가 |
+
+isFalse()는 boolean 값이 false인지, isEqualTo()는 문자열과 숫자 등 실제값이 예상값과 같은지 확인할 때 사용합니다. getFirst()로 첫 회원을 꺼내기 전에 hasSize(1)로 검색 결과 개수를 검증합니다. DB가 발급한 ID는 고정값으로 가정하지 않습니다.
+
+**실행과 예상 결과**
+
+MemberRepositoryTests를 실행하면 활성 테스트 2개는 성공하고 @Disabled가 붙은 테스트 1개는 건너뜁니다. hasSize(4)를 hasSize(5)로 바꾸어 실패 결과의 예상값과 실제값을 확인한 다음 복구합니다. 추가 실습에서는 @Disabled를 제거하고 없는 이름 검색이 빈 목록을 반환하는지 확인합니다.
+
+### 3.5.3 Mockito와 assertThat으로 Service 검증
 
 > **본 교재 참고**  
 > 4.3.1 「테스트 클래스 작성」, 4.3.3 「단위 테스트」
@@ -1159,16 +1333,17 @@ class ArticleServiceTests {
     @Mock
     private ArticleRepository articleRepository;
 
+    // 조회 테스트에서는 호출하지 않지만, Service의 생성자 의존성을 채우기 위해 준비한다.
     @Mock
     private MemberRepository memberRepository;
 
-    // 실제 Service 객체를 만들고 가짜 Repository들을 생성자로 주입한다.
+    // Mockito가 실제 Service 객체를 만들고 가짜 Repository들을 생성자로 주입한다.
     @InjectMocks
     private ArticleService articleService;
 
     @Test
     @DisplayName("게시글을 제목과 작성자 이름이 담긴 응답 DTO로 변환한다")
-    void findArticleById() {
+    void testFindArticleById() {
         // DB에 저장하지 않고 객체만 준비한다. ID도 테스트에서 직접 정한다.
         Member member = Member.builder()
                 .id(1L).name("정혁").email("JungHyuk@campus.com").age(10).build();
@@ -1197,7 +1372,11 @@ class ArticleServiceTests {
 | when(...).thenReturn(...) | 특정 호출의 반환값 지정 |
 | assertThat(실제값).isEqualTo(예상값) | 두 값이 같지 않으면 실패 |
 
-여기의 ID 1은 외부 DB의 ID가 아니라 직접 만든 가짜 객체의 값입니다. memberRepository도 Service 생성자에 필요한 가짜 의존성으로 준비합니다. @InjectMocks가 만드는 Service는 실제 객체이므로 findById()의 DTO 변환 코드가 실행됩니다.
+이 단위 테스트는 스프링 컨테이너를 생성하지 않습니다. `@ExtendWith(MockitoExtension.class)`로 연결한 Mockito가 `@Mock` 객체들을 만들고, `@InjectMocks`가 붙은 ArticleService를 생성하면서 두 Repository를 생성자로 주입합니다. ArticleService에 `@Service`가 붙어 있어도 이 테스트에서는 스프링이 객체를 생성하거나 주입하지 않습니다.
+
+ArticleService의 생성자는 ArticleRepository와 MemberRepository를 모두 받으므로, 이 예제에서는 두 의존성을 Mock으로 준비합니다. 조회 메서드는 ArticleRepository만 호출하고 작성자 정보는 미리 준비한 Article의 member에서 읽으므로, MemberRepository에는 반환값을 설정하지 않습니다. 의존성을 반드시 모두 Mock으로 만들어야 하는 것은 아니며, 실제 객체를 직접 만들어 생성자에 전달하는 방식도 가능합니다.
+
+여기의 ID 1은 외부 DB의 ID가 아니라 직접 만든 테스트 객체의 값입니다. `@InjectMocks`가 만드는 Service는 실제 객체이므로 findById()의 DTO 변환 코드가 실행됩니다. 다음 절의 `@SpringBootTest` 통합 테스트는 스프링 컨테이너를 준비하고 `@Autowired`로 객체를 주입받는다는 점에서 다릅니다.
 
 `when(호출).thenReturn(반환값)`은 가짜 객체의 응답을 정합니다. 예제에서는 findById(1L)에 Optional로 감싼 article을 돌려주도록 설정했습니다.
 
@@ -1219,12 +1398,12 @@ ArticleServiceTests를 개별 실행합니다. 이 테스트는 DB 환경변수�
 
 실제 Service가 반환한 제목과 작성자 이름이 각각 예상과 같으면 성공합니다. thenReturn의 글 제목만 바꾸어 보면 예상값과 달라져 실패함을 확인하고 복구합니다.
 
-### 3.5.2 MockMvc로 게시글 조회 통합 테스트
+### 3.5.4 MockMvc로 게시글 조회 통합 테스트
 
 > **본 교재 참고**  
 > 4.3.2 「통합 테스트」
 
-MockMvc는 외부 서버 포트를 열고 브라우저를 호출하는 대신 MVC 요청 처리 과정을 테스트 안에서 실행합니다. 현재 예제는 Controller·Service·Repository와 MariaDB를 실제로 연결합니다.
+MockMvc는 외부 서버 포트를 열고 브라우저를 호출하는 대신 MVC 요청 처리 과정을 테스트 안에서 실행합니다. 현재 예제는 Controller·Service·Repository와 테스트용 H2를 실제로 연결합니다. H2를 사용해도 여러 계층을 연결하여 검증하므로 통합 테스트입니다.
 
 **실습 코드**
 
@@ -1234,9 +1413,12 @@ MockMvc는 외부 서버 포트를 열고 브라우저를 호출하는 대신 MV
 package com.example.demo.controller;
 
 import com.example.demo.entity.Article;
+import com.example.demo.entity.Member;
 import com.example.demo.repository.ArticleRepository;
+import com.example.demo.repository.MemberRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -1244,13 +1426,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// 실제 Controller, Service, Repository와 MariaDB를 연결해 확인한다.
-// integration 태그가 붙은 테스트는 Gradle의 기본 테스트 실행에서 제외한다.
-@Tag("integration")
+// 실제 Controller, Service, Repository와 H2를 연결해 확인한다.
 @SpringBootTest
 @AutoConfigureMockMvc
 class ArticleControllerIntegrationTests {
@@ -1260,17 +1439,33 @@ class ArticleControllerIntegrationTests {
     @Autowired
     private ArticleRepository articleRepository;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
+    private Article article;
+
+    @BeforeEach
+    void setUp() {
+        // 외부 DB의 샘플 데이터에 의존하지 않고 테스트에 필요한 데이터만 준비한다.
+        Member member = memberRepository.save(Member.builder()
+                .name("정혁").email("article-test@example.com").age(10).build());
+        article = articleRepository.save(Article.builder()
+                .title("주말에 한강에서 자전거를 탔어요").member(member).build());
+    }
+
+    @AfterEach
+    void tearDown() {
+        // 게시글이 회원을 참조하므로 게시글부터 삭제한다.
+        articleRepository.deleteAll();
+        memberRepository.deleteAll();
+    }
+
     @Test
     // DisplayName은 실행 결과에 표시할 테스트 이름이다.
     @DisplayName("게시글 조회 API가 제목과 작성자 이름을 응답한다")
-    void findArticleById() throws Exception {
-        // data.sql로 준비한 게시글에서 실제 ID를 가져온다.
-        Article article = articleRepository.findAll().getFirst();
-
+    void testFindArticleById() throws Exception {
         // perform: 서버 포트를 열지 않고 지정한 HTTP 요청 처리를 실행한다.
         mockMvc.perform(get("/articles/{id}", article.getId()))
-                // andDo(print()): 요청·응답을 콘솔에 출력한다.
-                .andDo(print())
                 // andExpect: 응답 상태가 200인지 확인한다.
                 .andExpect(status().isOk())
                 // $.title은 title 필드를 선택하고, value는 예상값과 비교한다.
@@ -1282,9 +1477,9 @@ class ArticleControllerIntegrationTests {
 
 **코드 설명**
 
-perform()이 요청을 실행하고, andDo(print())가 요청·응답을 출력합니다. andExpect()는 기대한 결과를 확인합니다. jsonPath로 응답 JSON의 값을 선택한 뒤 value로 예상값과 비교합니다. 현재 테스트는 단건 DTO의 title·writerName을 검사합니다.
+setUp()에서 회원과 게시글을 H2에 저장하고, tearDown()에서 게시글과 회원 순서로 삭제합니다. perform()이 요청을 실행하고, andExpect()가 기대한 결과를 확인합니다. jsonPath로 응답 JSON의 값을 선택한 뒤 value로 예상값과 비교합니다. 현재 테스트는 단건 DTO의 title·writerName을 검사합니다.
 
-DisplayName은 실행 창에 보일 한글 이름입니다. `@Disabled("사유")`를 메서드에 붙이면 그 테스트를 건너뛰고, 클래스에 붙이면 클래스의 모든 테스트를 건너뜁니다. 현재 예제에는 Disabled를 적용하지 않았습니다. findAll().getFirst()는 샘플 데이터가 있는 상태를 전제로 하며 특정 ID를 가정하지 않습니다.
+조회에는 setUp()에서 저장한 게시글의 실제 ID를 사용합니다. MariaDB의 공통 SQL이나 특정 ID에 의존하지 않으며, 게시글이 회원을 참조하므로 정리할 때는 게시글을 먼저 삭제합니다.
 
 **참고: JSONPath의 기본 경로**
 
@@ -1301,38 +1496,25 @@ DisplayName은 실행 창에 보일 한글 이름입니다. `@Disabled("사유")
 
 **실행과 예상 결과**
 
-MariaDB 환경변수를 설정하고 IntelliJ의 JUnit 실행기로 통합 테스트를 개별 실행합니다. Gradle에 실행을 위임하면 다음 태그 제외 설정이 적용됩니다.
+ArticleControllerIntegrationTests를 IDE에서 개별 실행하거나 Gradle의 test 태스크로 실행합니다. MariaDB 서버나 DB 환경변수를 준비하지 않아도 됩니다.
 
-응답 상태 200, JSON 제목·작성자 이름이 DB에서 읽은 글과 같으면 성공합니다. SQL 연결 실패는 MVC 검증 이전의 준비 환경 문제이므로 접속 설정과 초기 데이터를 먼저 확인합니다.
+응답 상태 200, JSON 제목·작성자 이름이 테스트에서 준비한 게시글과 같으면 성공합니다. 이 테스트는 HTTP 요청부터 DB 조회와 응답 DTO 변환까지 연결하여 검증하며, MariaDB 고유의 SQL이나 제약 조건을 확인하는 테스트는 아닙니다.
 
-### 3.5.3 통합 테스트 태그와 기본 빌드
+### 3.5.5 기본 테스트 실행
 
-개발 중 필요한 통합 테스트라도 기본 빌드 때 외부 DB를 요구하지 않도록 분류할 수 있습니다. 태그는 분류 이름이며 integration이라는 문자열 자체가 특별한 예약어는 아닙니다.
-
-**실습 코드**
-
-다음은 `build.gradle`에서 테스트 실행 조건을 지정하는 부분입니다. 공통 프로젝트 설정과 의존성은 `spring-rest/build.gradle`의 전체 내용을 확인합니다.
+모듈 폴더에서 `./gradlew.bat test`를 실행하면 JUnit 테스트를 실행합니다. `@Tag`에 따른 제외 설정이 없으므로 H2를 사용하는 Spring 테스트와 Mockito 단위 테스트가 모두 포함됩니다. `@Disabled`가 붙은 추가 실습만 건너뜁니다.
 
 [build.gradle — test 태스크 발췌](../spring-rest/build.gradle)
 
 ```groovy
 tasks.named('test') {
-	useJUnitPlatform {
-		// test와 build 실행 시 실제 DB가 필요한 통합 테스트를 제외한다.
-		excludeTags 'integration'
-	}
+	useJUnitPlatform()
 }
 ```
 
-**코드 설명**
+DemoApplicationTests의 testContextLoads()는 테스트용 H2 설정으로 스프링 컨테이너가 시작되는지 확인합니다. 메서드 본문이 비어 있어도 컨텍스트 초기화에 실패하면 테스트가 실패합니다. 기본 설정의 @SpringBootTest는 실제 HTTP 서버 포트를 열지 않으며, HTTP 요청 검증은 앞 절처럼 MockMvc를 사용합니다.
 
-test 태스크의 excludeTags 'integration' 설정은 해당 태그의 테스트를 기본 test·build에서 제외합니다. @Tag는 테스트를 분류하는 표식이므로, 제외하려면 Gradle의 실행 조건도 함께 설정해야 합니다.
-
-**실행과 예상 결과**
-
-모듈 폴더에서 `./gradlew.bat test`를 실행하면 태그 제외 설정으로 기본 테스트를 실행합니다. DB 통합 테스트는 IDE의 JUnit 실행기로 따로 실행합니다.
-
-기본 Gradle 테스트는 실제 MariaDB를 쓰는 integration 태그 테스트를 건너뜁니다. Gradle 플러그인·의존성 다운로드 실패는 테스트의 성공·실패 판정과 별개의 실행 환경 문제입니다.
+실행 결과는 5개 성공과 추가 실습 1개 건너뜀입니다. @Disabled를 제거하면 추가 실습도 포함됩니다. 각 테스트는 다른 테스트의 실행 순서에 의존하지 않습니다. Gradle·의존성 다운로드 실패는 검증 실패와 구분하여 실행 환경을 확인합니다.
 
 ## 3.6 학습 확인
 
@@ -1342,4 +1524,6 @@ test 태스크의 excludeTags 'integration' 설정은 해당 태그의 테스트
 - Member API와 Article API의 계층 구조를 비교합니다.
 - 일괄 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.
 - Mockito의 가짜 Repository와 실제 Service를 구분합니다.
-- MockMvc 통합 테스트의 DB 준비가 단위 테스트와 다른 이유를 설명합니다.
+- @BeforeEach·@AfterEach의 실행 순서와 @Disabled의 동작을 설명합니다.
+- assertThat()의 목록·문자열·숫자·boolean 검증 문법을 사용합니다.
+- H2를 사용하는 통합 테스트와 DB를 사용하지 않는 Mockito 단위 테스트를 구분합니다.

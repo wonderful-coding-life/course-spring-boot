@@ -68,7 +68,16 @@ DELETE {{baseUrl}}/members/{{memberId}}
 GET {{baseUrl}}/members/{{memberId}}
 Accept: application/json
 
-### 10. 이메일로 샘플 회원 조회 (200 OK)
-# ?email=값을 @RequestParam("email")으로 받는다. 등록한 정혁과 관계없이 실행할 수 있다.
-GET {{baseUrl}}/members/search?email=SeojunYoon@campus.com
+### 10. 이름으로 샘플 회원 검색 (200 OK)
+# name은 선택 조건이다. 이름이 정확히 일치하는 회원을 배열로 반환한다.
+GET {{baseUrl}}/members?name=윤서준
+Accept: application/json
+
+### 11. 검색 결과가 없는 이름 조회 (200 OK, 빈 배열)
+GET {{baseUrl}}/members?name=없는이름
+Accept: application/json
+
+### 12. 빈 이름으로 전체 회원 조회 (200 OK)
+# name을 생략하거나 빈 값·공백으로 보내면 전체 회원을 반환한다.
+GET {{baseUrl}}/members?name=
 Accept: application/json

@@ -1,16 +1,16 @@
 package com.example.demo;
 
-import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-// 전체 애플리케이션과 DB 설정을 로딩하므로 통합 테스트로 분류한다.
-@Tag("integration")
+// 테스트용 H2 설정으로 스프링 컨테이너가 정상적으로 시작되는지 확인한다.
 @SpringBootTest
 class DemoApplicationTests {
 
 	@Test
-	void contextLoads() {
+	@DisplayName("스프링 컨테이너가 정상적으로 시작된다")
+	void testContextLoads() {
 	}
 
 }

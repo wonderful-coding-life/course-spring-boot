@@ -64,7 +64,7 @@ Generate로 내려받은 ZIP 파일을 압축 해제하고, 폴더 이름을 각
 - 실행 코드와 의존성의 기준은 각 프로젝트의 실제 파일입니다. 코드 블록 위의 파일 링크로 원문을 열 수 있습니다.
 - 파일 링크를 통해 패키지·import·클래스 선언을 확인할 수 있습니다. 메서드 발췌는 해당 클래스의 주입 필드와 함께 읽습니다.
 - 앱은 각 프로젝트의 DemoApplication으로 실행합니다. 웹 모듈은 기본 8080 포트를 공유하므로 하나씩 실행합니다.
-- JDBC·MyBatis·JPA·REST는 MariaDB와 DB_URL·DB_USER·DB_PASS 환경변수를 사용합니다. 앱과 테스트 실행 설정에 모두 적용합니다.
+- JDBC·MyBatis·JPA·REST 앱은 MariaDB와 DB_URL·DB_USER·DB_PASS 환경변수를 사용합니다. JDBC·MyBatis·JPA 테스트에도 같은 환경변수를 적용합니다. REST의 Spring 테스트는 별도의 테스트용 H2 설정을 사용하며, Mockito 단위 테스트는 DB를 사용하지 않습니다.
 - MVC·Security는 H2 메모리 DB를 사용하며 앱 종료 시 데이터가 사라집니다. spring-thymeleaf는 DB 없이 실행합니다.
 - MyBatis·JPA는 @Test를 하나씩 실행하고 로그를 관찰합니다. REST 장에서 assertThat·MockMvc·Mockito로 자동 검증을 배웁니다.
 

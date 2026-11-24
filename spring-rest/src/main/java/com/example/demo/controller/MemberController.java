@@ -19,17 +19,15 @@ public class MemberController {
     private final MemberRepository memberRepository;
     private final MemberService memberService;
 
-    // GET /members: 전체 회원을 조회한다.
+    // GET /members?name=이름: 이름이 없으면 전체 회원을, 있으면 이름이 일치하는 회원을 조회한다.
     @GetMapping
-    public List<Member> findAll() {
-        return memberRepository.findAll();
-    }
-
-    // GET /members/search?email=이메일: ? 뒤의 email 값을 받아 조회한다.
-    @GetMapping("/search")
-    public Member findByEmail(@RequestParam("email") String email) {
-        return memberRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+    public List<Member> findAll(
+            @RequestParam(name = "name", required = false) String name) {
+        // 생략한 값은 null이며, 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리한다.
+        if (name == null || name.isBlank()) {
+            return memberRepository.findAll();
+        }
+        return memberRepository.findByName(name);
     }
 
     // GET /members/회원ID: URL의 ID로 회원을 조회한다. 없으면 404로 응답한다.
