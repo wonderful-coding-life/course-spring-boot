@@ -16,6 +16,14 @@ try {
     $xml=ReadPart 'word/document.xml';$styles=ReadPart 'word/styles.xml'
     $ns=[System.Xml.XmlNamespaceManager]::new($xml.NameTable);$ns.AddNamespace('w','http://schemas.openxmlformats.org/wordprocessingml/2006/main')
     $w=$ns.LookupNamespace('w')
+    # Word may localize built-in style IDs when saving (for example, Heading1 becomes 1).
+    $headingIds=@(foreach($level in 1..3) {
+        $style=$styles.SelectSingleNode('//w:style[w:name/@w:val="heading '+$level+'"]',$ns)
+        if(-not $style){throw "Missing heading style: $level"}
+        $style.GetAttribute('styleId',$w)
+    })
+    $headingPredicate=($headingIds | ForEach-Object {'w:pPr/w:pStyle/@w:val="'+$_+'"'}) -join ' or '
+    $tocPredicate=($headingIds[0..1] | ForEach-Object {'w:pPr/w:pStyle/@w:val="'+$_+'"'}) -join ' or '
     $codeStyle=$styles.SelectSingleNode('//w:style[w:name/@w:val="실습 코드"]',$ns).GetAttribute('styleId',$w)
     $nodes=@($xml.SelectNodes('//w:p[w:pPr/w:pStyle/@w:val="'+$codeStyle+'"]',$ns))
     $source=[System.Collections.Generic.List[string]]::new()
@@ -34,15 +42,15 @@ try {
         if($s.ToString() -ne $source[$i]){throw ('Code content mismatch at block '+($i+1))}
     }
     $pictureCount=$xml.SelectNodes('//w:drawing',$ns).Count
-    $headingCount=$xml.SelectNodes('//w:p[w:pPr/w:pStyle/@w:val="Heading1" or w:pPr/w:pStyle/@w:val="Heading2" or w:pPr/w:pStyle/@w:val="Heading3"]',$ns).Count
+    $headingCount=$xml.SelectNodes('//w:p['+$headingPredicate+']',$ns).Count
     $tocEntries=([regex]::Split([System.IO.File]::ReadAllText((Join-Path $WorkDir 'toc.txt')).Trim(),'\r\n|\r|\n')).Count
-    $expectedEntries=$xml.SelectNodes('//w:p[w:pPr/w:pStyle/@w:val="Heading1" or w:pPr/w:pStyle/@w:val="Heading2"]',$ns).Count
+    $expectedEntries=$xml.SelectNodes('//w:p['+$tocPredicate+']',$ns).Count
     if($tocEntries -ne $expectedEntries){throw "TOC mismatch: $tocEntries / $expectedEntries"}
     if($xml.OuterXml.Contains('__BOOK_TOC__')){throw 'Unresolved TOC token'}
     $fields=($xml.SelectNodes('//w:instrText',$ns)|ForEach-Object InnerText)-join ' '
     if($fields -notmatch 'TOC '){throw 'Missing TOC field'}
     if($headingCount -ne $manifest.Headings.Count){throw 'Heading count differs from Markdown'}
-    $actualHeadings=@($xml.SelectNodes('//w:p[w:pPr/w:pStyle/@w:val="Heading1" or w:pPr/w:pStyle/@w:val="Heading2" or w:pPr/w:pStyle/@w:val="Heading3"]',$ns))
+    $actualHeadings=@($xml.SelectNodes('//w:p['+$headingPredicate+']',$ns))
     for($i=0;$i -lt $actualHeadings.Count;$i++) {
         $headingText=($actualHeadings[$i].SelectNodes('.//w:t',$ns)|ForEach-Object InnerText)-join ''
         if($headingText -ne $manifest.Headings[$i].Text){throw "Heading differs from Markdown: $headingText"}

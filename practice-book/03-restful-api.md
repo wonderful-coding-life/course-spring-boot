@@ -229,15 +229,10 @@ URL 안의 ID는 @PathVariable로 받습니다. Repository의 결과가 없으�
 [MemberController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members?name=이름: 이름이 없으면 전체 회원을, 있으면 이름이 일치하는 회원을 조회한다.
+// GET /members: 전체 회원을 조회한다.
 @GetMapping
-public List<Member> findAll(
-        @RequestParam(name = "name", required = false) String name) {
-    // 생략한 값은 null이며, 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리한다.
-    if (name == null || name.isBlank()) {
-        return memberRepository.findAll();
-    }
-    return memberRepository.findByName(name);
+public List<Member> findAll() {
+    return memberRepository.findAll();
 }
 ```
 
@@ -272,7 +267,7 @@ Accept: application/json
 
 @GetMapping에 주소가 없으면 공통 주소 /members를 사용합니다. `/{id}`가 있으면 /members/실제ID입니다. 전체 조회는 List를 JSON 배열로, 단건 조회는 Member를 JSON 객체로 변환합니다. ResponseStatusException은 상태와 안내 사유를 전달합니다.
 
-목록 조회 메서드는 선택 조건인 name도 받습니다. 이 절에서는 조건 없이 전체 회원을 조회하며, 이름 조건에 따른 분기는 3.2.6절에서 실습합니다.
+이 절에서는 검색 조건 없이 전체 회원을 조회하는 findAll()을 작성합니다. 3.2.6절에서는 이 메서드에 선택적인 이름 검색 조건을 추가하며, 예제 모듈의 실제 코드는 해당 기능까지 반영한 최종 형태입니다.
 
 **실행과 예상 결과**
 
@@ -429,7 +424,9 @@ members.http의 삭제와 삭제 후 조회를 순서대로 실행합니다.
 
 ### 3.2.6 선택적인 이름 검색과 오류 사유
 
-경로 변수는 /members/ID처럼 자원 위치를 표현하고, 쿼리 매개변수는 ?name=값처럼 목록의 검색 조건을 전달합니다. 이름 검색은 별도의 경로를 만들지 않고, 3.2.2절의 목록 조회 메서드에서 처리합니다.
+3.2.2절에서 작성한 전체 회원 목록 조회 API를 확장하여 이름으로 검색하는 기능을 추가하겠습니다. 검색할 이름은 `/members?name=윤서준`과 같이 요청 파라미터로 전달합니다.
+
+컨트롤러는 전달받은 이름과 일치하는 회원을 조회합니다. 동명이인이 있을 수 있으므로 결과는 목록으로 반환하며, 이름을 전달하지 않으면 기존과 같이 전체 회원을 조회합니다. MemberController.java의 기존 findAll()을 다음 코드로 변경합니다.
 
 **실습 코드**
 
@@ -484,7 +481,9 @@ spring.web.error.include-message=always
 
 **코드 설명**
 
-`@RequestParam(name = "name", required = false)`는 URL의 name 값을 받으며, 매개변수를 생략하면 null이 들어옵니다. 이 예제는 빈 문자열이나 공백도 조건이 없는 것으로 처리하여 전체 회원을 조회합니다. 이름이 있으면 findByName()으로 정확히 일치하는 회원을 조회하며, 동명이인이 있을 수 있으므로 결과를 항상 목록으로 반환합니다.
+`@RequestParam(name = "name", required = false)`는 쿼리 매개변수 name의 값을 받습니다. required = false이므로 name을 생략할 수 있으며, 생략하면 null이 들어옵니다.
+
+조건문에서는 name이 null이면 전체 회원을 조회합니다. 추가로 isBlank()를 사용하여 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리합니다. 이름이 있으면 findByName()으로 정확히 일치하는 회원을 조회하며, 동명이인이 있을 수 있으므로 결과를 항상 목록으로 반환합니다.
 
 목록 검색은 조건에 맞는 회원이 없어도 정상적으로 처리한 것이므로 200과 빈 배열을 반환합니다. 반면 /members/ID로 특정 회원을 조회할 때 해당 ID가 없으면 404로 응답합니다. spring.web.error.include-message=always는 이때 예외 사유를 오류 응답의 message에 포함하도록 합니다. 기본적으로 메시지 노출이 제한되는 이유는 내부 정보가 섞일 수 있기 때문입니다.
 
