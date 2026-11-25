@@ -1187,11 +1187,11 @@ MemberService의 일괄 가입 메서드에만 트랜잭션을 적용합니다. 
 [MemberController.java — registerAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// POST /members/batch: 회원 JSON 배열을 받아 Service에서 한 번에 가입 처리한다.
+// POST /members/batch: 한 번에 가입 처리하고 생성된 ID가 포함된 회원 목록을 반환한다.
 @PostMapping("/batch")
 @ResponseStatus(HttpStatus.CREATED)
-public void registerAll(@RequestBody List<Member> members) {
-    memberService.registerAll(members);
+public List<Member> registerAll(@RequestBody List<Member> members) {
+    return memberService.registerAll(members);
 }
 ```
 
@@ -1206,6 +1206,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -1215,12 +1216,15 @@ public class MemberService {
 
     // 여러 회원의 가입을 하나로 묶는다. 중간에 예외가 발생하면 앞의 가입도 취소된다.
     @Transactional
-    public void registerAll(List<Member> members) {
+    public List<Member> registerAll(List<Member> members) {
+        List<Member> savedMembers = new ArrayList<>();
         for (Member member : members) {
             // 신규 회원의 ID는 DB에서 생성한다.
             member.setId(null);
-            memberRepository.save(member);
+            Member savedMember = memberRepository.save(member);
+            savedMembers.add(savedMember);
         }
+        return savedMembers;
     }
 }
 ```
@@ -1271,6 +1275,29 @@ Accept: application/json
 
 컨트롤러가 주입받은 서비스의 공개 메서드를 호출하면 스프링이 트랜잭션을 적용합니다. 첫 번째 정혁을 저장한 뒤 두 번째 회원을 기존 윤서준의 이메일로 저장하면 UNIQUE 제약 위반이 발생합니다. 이 예외를 메서드 안에서 처리하지 않고 밖으로 전달하므로 정혁의 가입도 취소됩니다.
 
+모든 회원을 정상적으로 저장하면 서비스는 각 save()의 반환값을 savedMembers에 담아 반환합니다. 각 저장 결과에는 DB가 생성한 ID가 포함되며, 컨트롤러는 이 목록을 응답 본문으로 전달합니다. Accept가 application/json이면 상태 코드 201과 회원 JSON 배열을 받습니다.
+
+다음은 중복되지 않는 두 회원을 정상적으로 등록한 경우의 응답 형태입니다. ID는 설명용이며 실제 DB가 생성한 값으로 바뀝니다. 위 members-batch.http의 요청 2는 중복 이메일로 실패하도록 구성했으므로 이 성공 응답 대신 500 오류 응답을 받습니다.
+
+```json
+[
+  {
+    "id": 51,
+    "name": "정혁",
+    "email": "JungHyuk@campus.com",
+    "age": 10
+  },
+  {
+    "id": 52,
+    "name": "김하늘",
+    "email": "HaneulKim@campus.com",
+    "age": 25
+  }
+]
+```
+
+트랜잭션의 커밋까지 성공해야 서비스 호출이 정상적으로 끝나고 목록을 응답할 수 있습니다. 중간에 저장이 실패하면 예외가 전달되므로, 그때까지 담아 둔 일부 회원 목록을 성공 응답으로 반환하지 않습니다.
+
 **트랜잭션의 적용 조건과 롤백 규칙**
 
 별도 설정이 없다면 스프링은 `RuntimeException`과 `Error`가 메서드 밖으로 전달될 때 트랜잭션을 롤백하며, 체크 예외는 기본 롤백 대상이 아닙니다. 이 예제의 DB 제약 위반은 런타임 예외로 전달되므로 전체 가입이 취소됩니다. 체크 예외에도 롤백이 필요하다면 `@Transactional(rollbackFor = Exception.class)`처럼 규칙을 지정할 수 있습니다.
@@ -1299,6 +1326,79 @@ Accept: application/json
 | 1 | GET /members?name=정혁 | 결과 배열에서 이메일이 JungHyuk@campus.com인 회원의 실제 ID |
 | 2 | DELETE /members/조회한ID | 응답 본문 없는 204 |
 | 3 | GET /members | 기존 회원 4명 |
+
+### 3.4.2 API 응답이 늦어질 때 타임아웃 처리
+
+클라이언트가 API를 호출한 뒤 응답을 오래 기다리면 사용자는 요청이 처리되고 있는지 알기 어렵습니다. 회원 일괄 가입처럼 여러 데이터를 처리하는 작업은 등록할 데이터가 많거나 DB 처리가 지연되면 응답 시간도 길어질 수 있습니다.
+
+이러한 요청에는 서버가 응답을 기다리게 할 시간을 정하고, 그 시간이 지나면 오류를 반환하도록 타임아웃을 설정할 수 있습니다. 클라이언트는 서버가 보낸 오류 응답을 받을 수 있도록 네트워크 전달 시간 등을 고려하여 서버의 제한 시간보다 여유 있게 기다리도록 설정합니다.
+
+스프링 MVC에서는 컨트롤러가 Callable을 반환하도록 작성하고, 비동기 요청의 처리 제한 시간을 설정할 수 있습니다. 이 방식에서는 제한 시간이 지나면 기본적으로 503 Service Unavailable로 응답합니다.
+
+**별도 스레드에서 회원 일괄 가입 처리하기**
+
+기존 컨트롤러는 요청을 받은 스레드에서 회원 일괄 가입을 처리한 뒤 목록을 반환합니다. Callable을 반환하면 스프링이 별도의 작업 스레드에서 그 안의 코드를 실행하므로, 서비스 호출을 Callable 안에 작성합니다. Callable은 java.util.concurrent.Callable을 사용합니다.
+
+```java
+@PostMapping("/batch")
+@ResponseStatus(HttpStatus.CREATED)
+public Callable<List<Member>> registerAll(
+        @RequestBody List<Member> members) {
+    return () -> memberService.registerAll(members);
+}
+```
+
+클라이언트는 작업이 끝날 때까지 같은 요청의 응답을 기다립니다. 회원 가입과 트랜잭션 처리가 정상적으로 끝나면 생성된 ID가 포함된 회원 목록을 201 응답으로 전달합니다. JSON으로 응답하는 경우 앞 절과 같은 회원 JSON 배열을 받습니다.
+
+**응답을 기다릴 시간 제한하기**
+
+application.properties에서 비동기 요청의 처리 제한 시간을 지정합니다.
+
+```properties
+# Spring MVC 비동기 요청의 처리 제한 시간
+spring.mvc.async.request-timeout=3s
+```
+
+제한 시간을 3초로 설정하면 비동기 처리가 그 안에 끝나지 않았을 때 스프링이 기본적으로 503 오류를 응답합니다. 이 설정은 Callable로 처리하는 비동기 요청에 적용되며, 일반적인 동기 메서드의 실행을 강제로 끝내는 설정은 아닙니다.
+
+타임아웃이 발생하면 스프링은 작업 스레드에 인터럽트를 보내 중단을 요청합니다. 인터럽트는 실행 중인 코드를 강제로 종료하는 기능이 아니므로, 작업 코드에서도 중단 요청을 확인하고 처리를 멈추어야 합니다.
+
+**중단된 일괄 가입을 롤백하기**
+
+회원 가입을 중단하면서 앞서 저장한 회원도 함께 취소하려면 서비스에서 중단 요청을 확인하고 예외를 발생시키도록 작성합니다. 다음 코드의 checkInterrupted()는 같은 서비스 안에서 중단 요청을 확인하는 메서드입니다.
+
+```java
+@Transactional
+public List<Member> registerAll(List<Member> members) {
+    List<Member> savedMembers = new ArrayList<>();
+
+    for (Member member : members) {
+        checkInterrupted();
+
+        member.setId(null);
+        Member savedMember = memberRepository.save(member);
+        savedMembers.add(savedMember);
+    }
+
+    // 마지막 저장 중에 들어온 중단 요청도 확인합니다.
+    checkInterrupted();
+    return savedMembers;
+}
+
+private void checkInterrupted() {
+    if (Thread.currentThread().isInterrupted()) {
+        throw new IllegalStateException("회원 일괄 가입이 중단되었습니다.");
+    }
+}
+```
+
+회원을 저장하기 전에 현재 스레드가 중단 요청을 받았는지 확인합니다. 중단 요청이 있다면 런타임 예외인 IllegalStateException을 발생시켜 더 이상 회원을 저장하지 않도록 하며, 마지막 저장 중에 들어온 요청도 확인할 수 있도록 반복문 뒤에서도 검사합니다.
+
+이때 break로 반복문만 끝내면 메서드가 정상적으로 종료되어 앞서 저장한 회원이 커밋될 수 있습니다. 전체 가입을 취소하려면 런타임 예외를 메서드 밖으로 전달하여 @Transactional의 롤백이 적용되도록 합니다.
+
+Callable 안에서 주입받은 서비스를 호출하면 해당 작업 스레드에서 트랜잭션이 시작됩니다. 따라서 @Transactional은 회원을 저장하는 서비스 메서드에 적용합니다.
+
+503 응답을 받았다고 해서 DB 작업까지 즉시 취소되었다고 판단할 수는 없습니다. 실행 중인 DB 작업이 중단 요청에 바로 반응하지 않거나 이미 커밋되었을 수도 있으므로, 응답 타임아웃과 데이터 저장 결과를 구분해야 합니다. DB 작업 자체의 대기 시간을 제한하려면 쿼리 타임아웃 등도 별도로 설정해야 합니다.
 
 ## 3.5 자동 검증과 테스트
 
@@ -1690,7 +1790,8 @@ DemoApplicationTests의 testContextLoads()는 테스트용 H2 설정으로 스�
 - @PathVariable·@RequestParam·@RequestBody가 각각 어디의 값을 받는지 설명합니다.
 - @Valid와 필드의 검증 애너테이션이 맡은 역할을 구분하고, 검증 실패 시 기본 400 응답과 필드별 오류를 확인합니다.
 - Member API와 Article API의 계층 구조를 비교합니다.
-- 일괄 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.
+- 일괄 가입의 정상 응답에서 생성된 회원 ID를 확인하고, 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.
+- Callable의 실행 위치를 설명하고, 503 응답·인터럽트·트랜잭션 롤백을 구분합니다.
 - Mockito의 가짜 Repository와 실제 Service를 구분합니다.
 - @BeforeEach·@AfterEach의 실행 순서와 @Disabled의 동작을 설명합니다.
 - assertThat()의 목록·문자열·숫자·boolean 검증 문법을 사용합니다.

@@ -55,11 +55,11 @@ public class MemberController {
         return memberRepository.save(member);
     }
 
-    // POST /members/batch: 회원 JSON 배열을 받아 Service에서 한 번에 가입 처리한다.
+    // POST /members/batch: 한 번에 가입 처리하고 생성된 ID가 포함된 회원 목록을 반환한다.
     @PostMapping("/batch")
     @ResponseStatus(HttpStatus.CREATED)
-    public void registerAll(@RequestBody List<Member> members) {
-        memberService.registerAll(members);
+    public List<Member> registerAll(@RequestBody List<Member> members) {
+        return memberService.registerAll(members);
     }
 
     // PUT /members/회원ID: 기존 회원의 이름, 이메일, 나이를 요청 내용으로 변경한다.
