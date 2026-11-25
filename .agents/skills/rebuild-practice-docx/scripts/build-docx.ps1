@@ -159,7 +159,8 @@ function ConvertMarkdown([string]$file,[bool]$front=$false) {
             }
             if ($front -and $level -eq 1) {$title='이 책을 시작하기 전에'}
             $finalReview = (($file -eq '05-spring-security.md' -and $title -eq '5.5 학습 확인') -or
-                ($file -eq '03-restful-api.md' -and $title -eq '3.6 학습 확인'))
+                ($file -eq '03-restful-api.md' -and $title -eq '3.6 학습 확인') -or
+                ($file -eq '01-spring-core.md' -and $title -eq '1.5 학습 확인'))
             [void]$b.Append((Heading $title $level $front));$i++;continue
         }
         if ($line -match '^\[목차\]|^\[프로젝트 전체 안내\]') {$i++;continue}
