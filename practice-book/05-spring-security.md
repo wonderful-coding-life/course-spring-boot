@@ -19,7 +19,7 @@ Spring Security는 요청이 컨트롤러에 도달하기 전에 로그인 상�
 
 | 구분 | 이 예제에서 하는 일 | 관련 설정 |
 |---|---|---|
-| 인증 필터 | POST /login의 이메일·비밀번호를 받아 인증 절차에 전달합니다. | `formLogin()`, `usernameParameter("email")` |
+| 인증 필터 | POST /login의 이메일·비밀번호를 받아 인증 절차에 전달합니다. | `formLogin()`, 기본 `username`·`password` 매개변수 |
 | 인가 필터 | 요청한 주소에 접근할 수 있는지 로그인 상태와 권한을 확인합니다. | `authorizeHttpRequests()`, `authenticated()`, `hasRole("ADMIN")` |
 
 그림의 UsernamePasswordAuthenticationFilter는 로그인 폼의 값을 인증 절차에 전달하는 클래스이고, AuthorizationFilter는 접근 권한을 검사하는 클래스입니다. 필터를 직접 작성하기보다 SecurityConfig에서 로그인 기능과 요청별 접근 규칙을 설정하여 사용합니다.
@@ -283,7 +283,7 @@ data.sql과 엔티티 필드, Repository 검색 조건을 대응시킵니다.
 
 뒤의 로그아웃 실습에서는 이 로그인 정보를 정리합니다. 실제 로그아웃 후 상품 목록을 다시 요청하면 로그인 화면으로 이동하는 이유도, 서버가 더 이상 그 요청을 로그인한 사용자의 요청으로 처리하지 않기 때문입니다.
 
-로그인 폼의 email·password는 Security가 받습니다. 개발자는 계정을 어떻게 찾을지와 비밀번호를 어떻게 확인할지 연결합니다. 직접 Controller에서 비밀번호 문자열을 비교하는 코드를 작성하지 않습니다.
+로그인 폼의 username·password는 Security가 받으며, 이 예제에서는 username에 이메일을 입력합니다. 개발자는 계정을 어떻게 찾을지와 비밀번호를 어떻게 확인할지 연결합니다. 직접 Controller에서 비밀번호 문자열을 비교하는 코드를 작성하지 않습니다.
 
 | 이름 | 이메일 | 비밀번호 | 권한 |
 |---|---|---|---|
@@ -379,7 +379,7 @@ Spring Security가 비밀번호와 권한을 확인하려면 DB에 저장한 회
 ```java
 @Bean
 public UserDetailsService userDetailsService(MemberRepository memberRepository) {
-    // 로그인 처리는 Security가 담당한다. 여기서는 이메일로 회원 정보를 찾아 제공한다.
+    // 폼의 username으로 전달된 이메일로 회원 정보를 찾아 제공한다.
     return email -> {
         var member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("회원을 찾을 수 없습니다."));
@@ -437,8 +437,9 @@ public String login() {
 <!-- POST /login은 Controller가 아니라 Spring Security가 처리한다. -->
 <form th:action="@{/login}" method="post">
     <p>
-        <label for="email">이메일</label>
-        <input type="email" id="email" name="email" autocomplete="username" required>
+        <!-- username은 기본 로그인 ID 매개변수 이름이며, 입력값은 이메일이다. -->
+        <label for="username">이메일</label>
+        <input type="email" id="username" name="username" autocomplete="username" required>
     </p>
     <p>
         <label for="password">비밀번호</label>
@@ -453,7 +454,7 @@ public String login() {
 
 **코드 설명**
 
-email 입력칸의 name은 SecurityConfig의 usernameParameter("email")과 연결되며, password는 기본 비밀번호 파라미터 이름입니다. 로그인 폼의 POST 요청은 Security가 처리하므로 컨트롤러에 별도의 POST /login 메서드를 작성하지 않습니다.
+Spring Security는 기본적으로 username과 password라는 매개변수로 로그인 ID와 비밀번호를 받습니다. 이 예제에서는 name="username"인 입력칸에 이메일을 입력하고, UserDetailsService에서 그 값으로 회원을 조회합니다. username은 요청 매개변수 이름이므로 화면의 이메일 안내 문구와 type="email"은 그대로 사용합니다. 로그인 폼의 POST 요청은 Security가 처리하므로 컨트롤러에 별도의 POST /login 메서드를 작성하지 않습니다.
 
 실패하면 /login?error로 이동하며, param.error는 URL에 error 요청 파라미터가 있는지 확인하는 표현식입니다. 이를 조건으로 한글 안내를 표시하고, th:action이 있는 POST 폼에는 뒤에서 살펴볼 요청 위조 방지용 CSRF 토큰도 자동으로 추가됩니다.
 
@@ -507,8 +508,6 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                     .anyRequest().authenticated())
             .formLogin(login -> login
                     .loginPage("/login")
-                    // 로그인 폼의 email 입력값을 로그인 ID로 사용한다.
-                    .usernameParameter("email")
                     // 로그인에 성공하면 상품 목록으로 이동한다.
                     .defaultSuccessUrl("/products", true)
                     .permitAll())
@@ -641,8 +640,8 @@ public String list(Model model) {
         <td th:text="|${product.price}원|">1200000원</td>
         <!-- 링크를 표시하는 것과 별개로 SecurityConfig에서도 관리자 권한을 검사한다. -->
         <td sec:authorize="hasRole('ADMIN')">
-            <a th:href="@{/products/{id}/edit(id=${product.id})}">수정</a>
-            <a th:href="@{/products/{id}/delete(id=${product.id})}">삭제</a>
+            <a th:href="@{/products/edit(id=${product.id})}">수정</a>
+            <a th:href="@{/products/delete(id=${product.id})}">삭제</a>
         </td>
     </tr>
 
@@ -747,8 +746,8 @@ GET /products/new는 빈 Product를 입력칸에 연결하고, POST /products는
 [ProductController.java — editForm()](../spring-security/src/main/java/com/example/demo/controller/ProductController.java)
 
 ```java
-@GetMapping("/products/{id}/edit")
-public String editForm(@PathVariable("id") Long id, Model model) {
+@GetMapping("/products/edit")
+public String editForm(@RequestParam("id") Long id, Model model) {
     model.addAttribute("product", findProduct(id));
     return "product-edit";
 }
@@ -757,9 +756,9 @@ public String editForm(@PathVariable("id") Long id, Model model) {
 [ProductController.java — edit()](../spring-security/src/main/java/com/example/demo/controller/ProductController.java)
 
 ```java
-@PostMapping("/products/{id}/edit")
-public String edit(@PathVariable("id") Long id, @ModelAttribute("product") Product product) {
-    Product found = findProduct(id);
+@PostMapping("/products/edit")
+public String edit(@ModelAttribute("product") Product product) {
+    Product found = findProduct(product.getId());
     found.setName(product.getName());
     found.setPrice(product.getPrice());
     productRepository.save(found);
@@ -787,7 +786,8 @@ private Product findProduct(Long id) {
 </head>
 <body>
 <h2>상품 수정</h2>
-<form th:action="@{/products/{id}/edit(id=${product.id})}" th:object="${product}" method="post">
+<form th:action="@{/products/edit}" th:object="${product}" method="post">
+    <input type="hidden" th:field="*{id}">
     <p>
         <label for="name">상품명</label>
         <input type="text" th:field="*{name}" required maxlength="128">
@@ -805,7 +805,9 @@ private Product findProduct(Long id) {
 
 **코드 설명**
 
-조회한 Product의 값을 폼에 표시하고, 저장할 때는 URL의 ID로 기존 상품을 찾아 이름과 가격을 변경합니다. findProduct()에서 대상을 찾지 못하면 ResponseStatusException으로 404를 지정하며, 이 모듈은 Spring Boot의 기본 오류 처리로 응답합니다.
+수정 링크는 /products/edit?id=상품ID로 연결되며, @RequestParam("id")로 쿼리 매개변수의 ID를 받아 상품을 조회합니다. 폼에는 조회한 Product의 값을 표시하고, ID는 hidden 필드로 전달합니다. POST /products/edit에서는 폼에 담긴 ID로 기존 상품을 찾아 이름과 가격을 변경합니다.
+
+findProduct()에서 대상을 찾지 못하면 ResponseStatusException으로 404를 지정하며, 이 모듈은 Spring Boot의 기본 오류 처리로 응답합니다.
 
 **실행과 예상 결과**
 
@@ -815,7 +817,7 @@ private Product findProduct(Long id) {
 
 ### 5.3.5 관리자 상품 삭제 링크
 
-현재 학습용 상품 예제의 삭제는 일반 링크를 눌러 GET으로 처리합니다. 3장의 REST DELETE와 4장의 회원 삭제 POST를 구분해 현재 Controller 매핑을 읽습니다.
+현재 학습용 상품 예제의 삭제는 4장의 회원 삭제처럼 일반 링크를 눌러 GET으로 처리합니다. 상품 삭제 링크는 /products/delete?id=상품ID로 연결되며, @RequestParam("id")로 쿼리 매개변수의 ID를 받습니다. 3장의 REST DELETE와 비교하며 각 Controller의 매핑과 ID 전달 방식을 확인합니다.
 
 > **GET 삭제 예제의 범위**
 >
@@ -826,8 +828,8 @@ private Product findProduct(Long id) {
 [ProductController.java — delete()](../spring-security/src/main/java/com/example/demo/controller/ProductController.java)
 
 ```java
-@GetMapping("/products/{id}/delete")
-public String delete(@PathVariable("id") Long id) {
+@GetMapping("/products/delete")
+public String delete(@RequestParam("id") Long id) {
     // 실습에서는 삭제 링크의 GET 요청으로 상품을 삭제한다.
     productRepository.delete(findProduct(id));
     return "redirect:/products";
@@ -836,7 +838,7 @@ public String delete(@PathVariable("id") Long id) {
 
 **코드 설명**
 
-상품 목록의 삭제 링크를 누르면 /products/실제ID/delete로 GET 요청을 보내며, @GetMapping 메서드가 상품을 찾아 삭제한 뒤 목록으로 리다이렉트합니다. 다른 상품 관리 요청처럼 관리자 권한을 먼저 검사하지만, 앞에서 설명한 것처럼 GET 삭제에는 POST 폼의 CSRF 토큰 검사가 적용되지 않습니다.
+상품 목록의 삭제 링크를 누르면 /products/delete?id=실제ID로 GET 요청을 보내며, @RequestParam("id")로 받은 ID의 상품을 찾아 삭제한 뒤 목록으로 리다이렉트합니다. 다른 상품 관리 요청처럼 관리자 권한을 먼저 검사하지만, 앞에서 설명한 것처럼 GET 삭제에는 POST 폼의 CSRF 토큰 검사가 적용되지 않습니다.
 
 **실행과 예상 결과**
 

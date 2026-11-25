@@ -8,8 +8,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 // 접근 권한은 SecurityConfig에서 검사하고, Controller는 상품 CRUD만 처리한다.
@@ -36,23 +36,23 @@ public class ProductController {
         return "redirect:/products";
     }
 
-    @GetMapping("/products/{id}/edit")
-    public String editForm(@PathVariable("id") Long id, Model model) {
+    @GetMapping("/products/edit")
+    public String editForm(@RequestParam("id") Long id, Model model) {
         model.addAttribute("product", findProduct(id));
         return "product-edit";
     }
 
-    @PostMapping("/products/{id}/edit")
-    public String edit(@PathVariable("id") Long id, @ModelAttribute("product") Product product) {
-        Product found = findProduct(id);
+    @PostMapping("/products/edit")
+    public String edit(@ModelAttribute("product") Product product) {
+        Product found = findProduct(product.getId());
         found.setName(product.getName());
         found.setPrice(product.getPrice());
         productRepository.save(found);
         return "redirect:/products";
     }
 
-    @GetMapping("/products/{id}/delete")
-    public String delete(@PathVariable("id") Long id) {
+    @GetMapping("/products/delete")
+    public String delete(@RequestParam("id") Long id) {
         // 실습에서는 삭제 링크의 GET 요청으로 상품을 삭제한다.
         productRepository.delete(findProduct(id));
         return "redirect:/products";

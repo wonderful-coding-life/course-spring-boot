@@ -59,12 +59,12 @@
 | `GET /products` | 상품 목록 조회 | 로그인 사용자 |
 | `GET /products/new` | 상품 등록 화면 | 관리자 |
 | `POST /products` | 상품 등록 후 목록으로 이동 | 관리자 |
-| `GET /products/{id}/edit` | 수정 링크로 상품 수정 화면 열기 | 관리자 |
-| `POST /products/{id}/edit` | 수정 내용 저장 후 목록으로 이동 | 관리자 |
-| `GET /products/{id}/delete` | 삭제 링크로 상품 삭제 후 목록으로 이동 | 관리자 |
+| `GET /products/edit?id=상품ID` | 수정 링크로 상품 수정 화면 열기 | 관리자 |
+| `POST /products/edit` | 수정 내용 저장 후 목록으로 이동 | 관리자 |
+| `GET /products/delete?id=상품ID` | 삭제 링크로 상품 삭제 후 목록으로 이동 | 관리자 |
 
 상품 목록의 수정·삭제는 같은 줄의 일반 링크입니다. 삭제 링크에는 JavaScript나 form을 사용하지 않습니다.
-등록·수정 내용의 저장은 POST 폼으로 처리합니다. 로그인·로그아웃·등록·수정 저장의 POST 폼에서 CSRF를 실습합니다.
+수정 화면은 @RequestParam("id")로 상품 ID를 받으며, 저장할 때는 hidden 필드로 ID를 전달합니다. 등록·수정 내용의 저장은 POST 폼으로 처리합니다. 로그인·로그아웃·등록·수정 저장의 POST 폼에서 CSRF를 실습합니다.
 
 ## 로그인 요청의 흐름
 
@@ -77,7 +77,7 @@
 - `GET /logout`: HomeController가 로그아웃 확인 화면을 보여 줍니다. 이때 로그인은 유지됩니다.
 - `POST /logout`: 확인 화면의 버튼을 누르면 Security가 로그아웃을 처리하고 `/` 홈 화면으로 이동합니다.
 
-로그인 폼의 `email`은 `usernameParameter("email")`과 연결됩니다.
+로그인 폼은 기본 매개변수 이름인 `username`과 `password`를 사용합니다. `username`에 이메일을 입력하고, UserDetailsService는 그 이메일로 회원을 조회합니다.
 POST 폼에 `th:action`을 사용하면 Thymeleaf가 CSRF 토큰을 자동으로 넣습니다.
 
 ## 403 오류 화면

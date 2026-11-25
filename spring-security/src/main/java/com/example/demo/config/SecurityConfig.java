@@ -23,7 +23,7 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(MemberRepository memberRepository) {
-        // 로그인 처리는 Security가 담당한다. 여기서는 이메일로 회원 정보를 찾아 제공한다.
+        // 폼의 username으로 전달된 이메일로 회원 정보를 찾아 제공한다.
         return email -> {
             var member = memberRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("회원을 찾을 수 없습니다."));
@@ -48,8 +48,6 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .formLogin(login -> login
                         .loginPage("/login")
-                        // 로그인 폼의 email 입력값을 로그인 ID로 사용한다.
-                        .usernameParameter("email")
                         // 로그인에 성공하면 상품 목록으로 이동한다.
                         .defaultSuccessUrl("/products", true)
                         .permitAll())

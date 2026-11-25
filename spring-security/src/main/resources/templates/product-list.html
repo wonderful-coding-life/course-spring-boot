@@ -25,8 +25,8 @@
         <td th:text="|${product.price}원|">1200000원</td>
         <!-- 링크를 표시하는 것과 별개로 SecurityConfig에서도 관리자 권한을 검사한다. -->
         <td sec:authorize="hasRole('ADMIN')">
-            <a th:href="@{/products/{id}/edit(id=${product.id})}">수정</a>
-            <a th:href="@{/products/{id}/delete(id=${product.id})}">삭제</a>
+            <a th:href="@{/products/edit(id=${product.id})}">수정</a>
+            <a th:href="@{/products/delete(id=${product.id})}">삭제</a>
         </td>
     </tr>
 
