@@ -92,7 +92,9 @@ mybatis.mapper-locations=classpath:mapper/*.xml
 
 `@Mapper`는 MyBatis가 사용할 인터페이스를 표시하고, `@Param`은 입력 매개변수를 SQL에서 사용할 이름과 연결합니다. 예를 들어 `@Param("email")`로 지정한 값은 XML에서 `#{email}`로 읽습니다.
 
-`mybatis.mapper-locations`는 XML을 찾을 위치입니다. `resultMap`의 `column`은 조회 결과의 컬럼 이름, `property`는 `Member`의 자바 속성 이름입니다.
+`mybatis.mapper-locations=classpath:mapper/*.xml`은 실행할 때 사용할 자원에서 mapper 폴더의 XML 파일을 찾도록 지정합니다. 이 프로젝트에서는 `src/main/resources/mapper` 아래의 파일에 해당하며, `*`는 이름이 다른 여러 XML 파일을 선택한다는 뜻입니다.
+
+`resultMap`의 `column`은 조회 결과의 컬럼 이름, `property`는 `Member`의 자바 속성 이름입니다.
 
 Member 모델(`spring-mybatis/src/main/java/com/example/demo/model/Member.java`)은 JDBC처럼 id·name·email·age를 담습니다. 인터페이스와 XML에서 철자가 다르면 호출할 SQL을 찾지 못합니다.
 
@@ -102,9 +104,9 @@ MyBatis는 SELECT로 조회한 결과를 자바 객체에 담을 때, 기본적�
 
 `resultMap`은 조회 결과의 컬럼과 객체의 속성 사이의 대응 관계를 명시하는 설정입니다. 컬럼 이름과 속성 이름이 다를 때는 `column`에 조회 결과의 컬럼 이름을, `property`에 객체의 속성 이름을 지정하여 연결할 수 있습니다.
 
-**독립 예제: 이름이 다른 컬럼과 속성 매핑**
+**이름이 다른 컬럼과 속성 연결하기**
 
-실습 테이블과 별개로, 이메일 주소를 저장하는 컬럼 이름이 `contact`이고 자바 객체의 속성 이름은 `email`인 경우를 가정합니다. 다음과 같이 `resultMap`을 작성하면 `contact` 컬럼의 값을 `email` 속성에 담을 수 있습니다.
+기존 DB와 자바 코드의 이름 규칙이 다르면 같은 데이터를 나타내는 컬럼과 속성의 이름이 다를 수 있습니다. 이메일 주소를 저장하는 컬럼 이름이 `contact`이고 자바 객체의 속성 이름은 `email`인 경우를 살펴봅니다. 다음과 같이 `resultMap`을 작성하면 `contact` 컬럼의 값을 `email` 속성에 담을 수 있습니다.
 
 ```xml
 <resultMap id="contactResultMap"
@@ -119,13 +121,13 @@ MyBatis는 SELECT로 조회한 결과를 자바 객체에 담을 때, 기본적�
 </select>
 ```
 
-이 예제에서는 `member_contact` 테이블에 `id`, `name`, `contact`, `age` 컬럼이 있다고 가정합니다. `contact`는 명시한 설정에 따라 `email`로 매핑되고, 이름이 같은 `id`, `name`, `age`는 기본 자동 매핑으로 처리됩니다. 매핑을 설명하기 위한 독립 예제이므로 실습 프로젝트에 테이블이나 Mapper 메서드를 추가하지 않습니다.
+이 예제에서는 `member_contact` 테이블에 `id`, `name`, `contact`, `age` 컬럼이 있다고 가정합니다. `contact`는 명시한 설정에 따라 `email`로 매핑되고, 이름이 같은 `id`, `name`, `age`는 기본 자동 매핑으로 처리됩니다.
 
 앞서 작성한 `memberResultMap`은 매핑 구조를 익히기 위해 이름이 같은 컬럼과 속성도 모두 명시했습니다. 자동 매핑이 활성화된 단순 조회에서는 이처럼 모든 항목을 나열할 필요 없이, 이름이 달라 별도 설정이 필요한 항목만 명시할 수 있습니다.
 
-**독립 예제: resultType 명시와 반환 타입 추론**
+**resultType 명시와 반환 타입 추론 비교하기**
 
-조회 결과의 컬럼 이름과 객체의 속성 이름이 같다면, 별도의 `resultMap` 없이 `resultType`으로 각 행을 담을 객체의 타입을 지정할 수 있습니다. 다음은 기존 `member` 테이블과 `Member`를 사용하는 설명용 독립 예제로, 두 XML 작성 방식은 같은 Mapper 메서드에 대한 대안입니다. 실습 프로젝트에 별도의 메서드를 추가하거나 두 XML을 함께 등록하지 않습니다.
+조회 결과의 컬럼 이름과 객체의 속성 이름이 같다면, 별도의 `resultMap` 없이 `resultType`으로 각 행을 담을 객체의 타입을 지정할 수 있습니다. 기존 `member` 테이블과 `Member`를 사용하여, 같은 Mapper 메서드에 대해 결과 타입을 직접 지정하는 방식과 반환 타입에서 알아내는 방식을 비교합니다.
 
 Mapper 인터페이스에 다음 메서드가 선언되어 있다고 가정합니다. XML의 `namespace`는 이 메서드가 속한 Mapper 인터페이스의 전체 이름과 일치해야 합니다.
 
@@ -166,6 +168,8 @@ MyBatis 3.5.12부터는 `resultType`과 `resultMap`을 모두 생략하면 연�
 
 > **본 교재 참고**  
 > 3.3.3 「예제 애플리케이션」
+
+조회·등록·수정·삭제를 확인할 때마다 실행 코드를 바꾸는 대신, 기능별 테스트 메서드를 작성하면 필요한 동작만 따로 실행할 수 있습니다. 여기서는 테스트를 Mapper의 각 기능을 실행하고 결과를 관찰하는 도구로 사용합니다.
 
 MemberMapperTests(`spring-mybatis/src/test/java/com/example/demo/mapper/MemberMapperTests.java`)를 엽니다. `@SpringBootTest`는 앱의 객체들을 준비하고, `@Autowired`는 Mapper를 주입합니다. `@Test`가 붙은 메서드 왼쪽 실행 버튼을 누르면 해당 기능을 실행합니다.
 

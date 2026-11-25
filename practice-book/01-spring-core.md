@@ -159,7 +159,7 @@ public class EspressoMachine implements CoffeeMachine {
 
 실습을 마친 뒤 `@Primary`를 에스프레소 머신으로 옮기고 앱을 재시작해 선택 결과를 비교합니다. 두 클래스에 동시에 붙이지 않습니다.
 
-**독립 예제: @Primary와 @Qualifier 비교**
+**@Primary와 @Qualifier 비교하기**
 
 `@Primary`가 여러 후보 중 기본으로 선택할 빈을 정한다면, `@Qualifier`는 특정 주입 위치에서 사용할 후보를 한정합니다. 드립 머신을 기본으로 유지하면서 특정 카페에는 에스프레소 머신을 전달하고 싶을 때 사용할 수 있습니다.
 
@@ -168,7 +168,7 @@ public class EspressoMachine implements CoffeeMachine {
 | `@Primary` | 빈으로 등록할 클래스 등 | 단일 빈을 주입할 때 기본 우선순위를 지정합니다. |
 | `@Qualifier` | 주입받을 필드나 생성자 매개변수 등 | 주입할 빈의 후보를 이름이나 구분값으로 한정합니다. |
 
-다음은 필드에 `@Autowired`와 `@Qualifier`를 함께 지정하는 독립 예제입니다. 다음 절의 `SpringCafe`를 대체하거나 실습 프로젝트에 추가하지 않고, 필드 주입에서 특정 빈을 선택하는 방식만 비교합니다.
+다음과 같이 필드에 `@Autowired`와 `@Qualifier`를 함께 지정하면, 해당 카페에서 사용할 머신을 선택할 수 있습니다.
 
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
@@ -222,7 +222,7 @@ public class SpringCafe {
 
 **코드 설명**
 
-`private final CoffeeMachine coffeeMachine`은 카페가 사용할 머신을 보관하는 필드입니다. `@RequiredArgsConstructor`를 붙이면 Lombok이 이 final 필드를 초기화하는 생성자를 만듭니다. 생성된 생성자의 형태를 자바 코드로 표현하면 다음과 같습니다. 원리를 이해하기 위한 예시이므로 프로젝트에 이 생성자를 중복해서 추가하지 않습니다.
+`private final CoffeeMachine coffeeMachine`은 카페가 사용할 머신을 보관하는 필드입니다. `@RequiredArgsConstructor`를 붙이면 Lombok이 이 final 필드를 초기화하는 생성자를 만듭니다. 롬복이 만드는 생성자를 자바 코드로 표현하면 다음과 같습니다.
 
 ```java
 public SpringCafe(CoffeeMachine coffeeMachine) {
@@ -232,9 +232,11 @@ public SpringCafe(CoffeeMachine coffeeMachine) {
 
 스프링은 SpringCafe의 생성자에 전달할 CoffeeMachine 빈을 찾습니다. 구현체가 둘이므로 @Primary가 붙은 DripCoffeeMachine을 선택해 전달합니다. 카페는 머신의 구체적인 종류를 결정하지 않고, 인터페이스에 선언된 brew()를 호출합니다. 이후 @Primary의 위치를 바꾸면 카페 코드를 고치지 않고도 사용할 머신을 바꿀 수 있습니다.
 
+로그 문자열의 `{}` 자리에는 뒤에 전달한 값이 들어갑니다. `coffeeMachine.getClass().getSimpleName()`은 실제 커피 머신 객체의 클래스 이름을 패키지 이름 없이 반환하므로, 어떤 구현체가 선택되었는지 로그에서 확인할 수 있습니다.
+
 **필드 주입과 비교하기**
 
-지금까지는 생성자를 통해 필요한 빈을 전달받았지만, 필드에 `@Autowired`를 붙여 직접 주입받을 수도 있습니다. 다음은 기존 생성자 주입 대신 필드 주입을 사용하는 경우의 선언을 발췌한 비교 코드로, 실제 SpringCafe에 함께 추가하지 않습니다.
+생성자를 통해 빈을 전달받는 코드뿐 아니라 필드에 `@Autowired`를 붙여 주입받는 코드도 볼 수 있습니다. 생성자 주입 대신 필드 주입을 사용한다면, 주입받을 필드를 다음과 같이 선언합니다.
 
 ```java
 @Autowired
@@ -243,11 +245,11 @@ private CoffeeMachine coffeeMachine;
 
 스프링은 `@Autowired`가 붙은 필드의 타입에 맞는 빈을 찾아 주입하며, 현재처럼 CoffeeMachine 빈이 여러 개라면 `@Primary`가 붙은 드립 머신을 우선 선택합니다. 필드 주입에서는 위와 같이 final 없이 필드를 선언하고, 롬복으로 주입용 생성자를 만들 필요도 없습니다.
 
-필드 주입은 선언이 간단하지만, 생성자 주입은 객체를 만들 때 필요한 의존성을 명확히 드러내고 스프링 없이 테스트할 때도 필요한 객체를 직접 전달하기 쉬우므로 스프링에서는 생성자 주입을 권장합니다. 따라서 이 실습에서는 기존의 생성자 주입 방식을 유지하고, 필드 주입은 다른 코드를 읽을 때 알아볼 수 있는 정도로 살펴봅니다. 생성자 주입은 생성자가 하나라면 `@Autowired`를 생략할 수 있으므로, 롬복이 생성자 하나를 만들어 주는 현재 코드에서도 애노테이션 없이 주입이 동작합니다.
+필드 주입은 선언이 간단하지만, 생성자 주입은 객체를 만들 때 필요한 의존성을 명확히 드러내고 스프링 없이 테스트할 때도 필요한 객체를 직접 전달하기 쉬우므로 스프링에서는 생성자 주입을 권장합니다. 생성자 주입은 생성자가 하나라면 `@Autowired`를 생략할 수 있으므로, 롬복이 생성자 하나를 만들어 주는 현재 코드에서도 애노테이션 없이 주입이 동작합니다.
 
 **여러 빈을 리스트로 주입받기**
 
-CoffeeMachine 빈 하나를 주입받는 대신 등록된 머신을 모두 사용하고 싶다면, 다음과 같이 필드 타입을 `List<CoffeeMachine>`으로 선언할 수 있습니다. 기존 coffeeMachine 필드를 대체하는 경우의 선언만 비교하며, 실제 실습 코드에는 적용하지 않습니다. List를 사용하려면 `java.util.List`를 import합니다.
+등록된 커피 머신의 기능을 모두 사용하려면 빈 하나를 선택하는 대신 목록으로 주입받을 수 있습니다. 기존 coffeeMachine 필드를 다음과 같이 `List<CoffeeMachine>` 타입으로 바꾸면, 같은 인터페이스를 구현한 빈을 한꺼번에 전달받습니다. List는 `java.util.List`를 사용합니다.
 
 ```java
 private final List<CoffeeMachine> coffeeMachines;
@@ -257,7 +259,7 @@ private final List<CoffeeMachine> coffeeMachines;
 
 **로거 선언과 @Slf4j 비교하기**
 
-로그를 출력하려면 일반적으로 `LoggerFactory.getLogger()`로 로거를 얻어 log 필드에 저장합니다. 따라서 로그를 사용하는 클래스마다 같은 형태의 선언을 반복해야 하는데, 클래스에 `@Slf4j`를 붙이면 롬복이 컴파일 과정에서 이 선언을 자동으로 만들어 반복 코드를 줄여 줍니다. 다음 두 코드는 로거 선언 부분만 비교한 발췌이며, 실제 SpringCafe에 덧붙이지 않습니다.
+로그를 출력하려면 일반적으로 `LoggerFactory.getLogger()`로 로거를 얻어 log 필드에 저장합니다. 따라서 로그를 사용하는 클래스마다 같은 형태의 선언을 반복해야 하는데, 클래스에 `@Slf4j`를 붙이면 롬복이 컴파일 과정에서 이 선언을 자동으로 만들어 반복 코드를 줄여 줍니다. 다음 두 코드는 로거를 직접 선언하는 방식과 롬복에 맡기는 방식을 각각 보여 줍니다.
 
 직접 로거를 선언하는 경우에는 다음과 같이 작성합니다.
 

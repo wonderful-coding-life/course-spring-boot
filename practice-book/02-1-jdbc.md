@@ -71,6 +71,8 @@ public class Member {
 
 조회 흐름은 연결 열기 → SQL 실행 → 행을 읽으며 객체 생성 → 목록에 추가 → 연결 닫기입니다. ResultSet은 처음에는 첫 행 이전을 가리킵니다. next()가 다음 행으로 이동하며 읽을 행이 있으면 true를 반환합니다.
 
+아래 메서드의 SQLException은 DB 연결이나 SQL 실행 중 발생하는 오류를 나타내는 예외입니다. `throws SQLException`은 이러한 예외가 발생했을 때 호출한 쪽으로 전달한다는 선언입니다.
+
 **실습 코드**
 
 [MemberRepository.java — findAll()](../spring-jdbc/src/main/java/com/example/demo/repository/MemberRepository.java)
@@ -221,7 +223,7 @@ public class DemoApplication {
 
 **코드 설명**
 
-`@Component`로 등록한 MemberRepository를 컨테이너에서 가져와 두 조회 메서드를 호출합니다. Repository 안에서는 DB 연결과 SQL 실행을 처리하고, 호출한 쪽에는 Member나 List를 반환합니다. 이처럼 데이터에 접근하는 코드를 한곳에 모으면 사용하는 쪽에서 JDBC 처리 과정을 반복해서 작성하지 않아도 됩니다. `throws SQLException`은 DB 작업 중 발생한 예외를 호출한 쪽에 전달한다는 선언입니다.
+`@Component`로 등록한 MemberRepository를 컨테이너에서 가져와 두 조회 메서드를 호출합니다. Repository 안에서는 DB 연결과 SQL 실행을 처리하고, 호출한 쪽에는 Member나 List를 반환합니다. 이처럼 데이터에 접근하는 코드를 한곳에 모으면 사용하는 쪽에서 JDBC 처리 과정을 반복해서 작성하지 않아도 됩니다.
 
 **실행과 예상 결과**
 
