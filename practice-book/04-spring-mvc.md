@@ -576,7 +576,9 @@ spring-mvc는 브라우저 입력을 DB에 반영합니다. H2 메모리 DB는 �
 
 ### 4.2.1 스키마와 데이터 자동 초기화
 
-앱을 다시 실행할 때마다 같은 회원과 게시글로 실습하려면 테이블과 초기 데이터를 함께 준비해야 합니다. Spring Boot는 이 프로젝트의 내장 메모리 DB를 준비하면서 schema.sql로 테이블을 만들고 data.sql로 값을 넣습니다.
+애플리케이션을 다시 실행할 때마다 동일한 회원과 게시글 데이터로 실습하려면 테이블과 초기 데이터를 함께 준비해야 합니다. Spring Boot는 H2와 같은 내장 메모리 DB를 사용하는 경우 애플리케이션 시작 시 schema.sql을 실행하여 테이블을 생성하고, data.sql을 실행하여 초기 데이터를 등록합니다.
+
+이 실습 환경에서는 Hibernate도 기본적으로 엔티티를 기준으로 테이블을 자동 생성합니다. SQL 스크립트로 준비한 테이블을 Hibernate가 다시 생성하면 초기 데이터가 삭제될 수 있으므로, 다음 설정으로 Hibernate의 자동 테이블 생성 기능을 비활성화합니다.
 
 **실습 코드**
 
@@ -617,17 +619,24 @@ CREATE TABLE IF NOT EXISTS article (
 
 **코드 설명**
 
-ddl-auto=none은 JPA의 별도 테이블 생성을 끄고 SQL이 테이블을 만들도록 역할을 정한 설정입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원하므로, 같은 구조의 테이블을 준비할 수 있습니다.
+`spring.jpa.hibernate.ddl-auto=none`은 Hibernate의 자동 테이블 생성 기능을 끄는 설정입니다. 이 실습에서는 schema.sql이 테이블 생성을 담당하고, data.sql이 초기 데이터를 등록합니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원하므로, 같은 구조의 테이블을 준비할 수 있습니다.
 
-data.sql은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 회원 4명과 회원별 게시글 25개를 준비하여, 앱을 시작할 때마다 같은 상태에서 화면 기능을 확인합니다.
+SQL 초기화 스크립트의 실행 범위를 정하는 `spring.sql.init.mode`의 기본값은 `embedded`입니다. 현재 실습은 H2 내장 메모리 DB를 사용하므로, `spring.sql.init.mode=always`를 별도로 설정하지 않아도 스크립트가 자동으로 실행됩니다.
 
-DB 내용을 직접 확인하고 싶다면 /h2-console을 사용할 수 있습니다. 실행 로그에 표시된 실제 jdbc:h2:mem:... 주소와 사용자 sa, 빈 비밀번호로 접속합니다. 화면 CRUD는 콘솔을 열지 않아도 실습할 수 있습니다.
+data.sql은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 해당 파일을 src/main/resources에 준비하면 회원 4명과 회원별 게시글 25개가 등록되어, 앱을 시작할 때마다 같은 상태에서 실습할 수 있습니다.
 
 **실행과 예상 결과**
 
-spring-thymeleaf를 종료한 뒤 spring-mvc의 DemoApplication을 실행합니다. http://localhost:8080 으로 접속합니다.
+spring-thymeleaf를 종료한 뒤 spring-mvc의 DemoApplication을 실행합니다. http://localhost:8080/h2-console 에서 실행 로그에 표시된 실제 jdbc:h2:mem:... 주소와 사용자 sa, 빈 비밀번호로 접속합니다.
 
-홈 요청은 /members로 리다이렉트되고 회원 4명이 표시됩니다. 앱을 다시 실행하면 등록·수정 결과는 초기 샘플 상태로 돌아갑니다.
+H2 콘솔에서 다음 SQL을 실행하여 테이블 생성과 초기 데이터 등록 결과를 확인합니다.
+
+```sql
+SELECT COUNT(*) FROM member;
+SELECT COUNT(*) FROM article;
+```
+
+member는 4, article은 100이 조회됩니다. H2 메모리 DB는 앱을 종료하면 데이터가 사라지고 다음 실행에서 SQL 스크립트로 다시 준비되므로, 이후 실습에서 데이터를 등록하거나 수정해도 앱을 다시 실행하면 초기 샘플 상태로 돌아갑니다.
 
 ## 4.3 Member 화면 CRUD
 
@@ -666,6 +675,27 @@ public class MemberController {
 Controller는 조회 결과를 Model에 넣고 화면 이름을 반환합니다. 템플릿은 이름이 일치하는 Model 값을 사용해 회원 목록과 상세 정보를 출력합니다.
 
 **실습 코드**
+
+홈 주소로 접속한 사용자도 회원 목록으로 이동할 수 있도록, MemberController와 같은 controller 패키지에 HomeController를 작성합니다.
+
+[HomeController.java](../spring-mvc/src/main/java/com/example/demo/controller/HomeController.java)
+
+```java
+package com.example.demo.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HomeController {
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/members";
+    }
+}
+```
+
+이어서 MemberController에 회원 목록과 상세 조회 메서드를 작성하고, 각 메서드가 반환하는 이름에 맞춰 템플릿을 준비합니다.
 
 [MemberController.java — list()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
 
@@ -767,6 +797,8 @@ private Member findMember(Long id) {
 
 **코드 설명**
 
+HomeController의 `@GetMapping("/")`는 홈 요청을 처리합니다. `return "redirect:/members"`는 브라우저가 /members로 새 GET 요청을 보내도록 안내하며, 이 요청은 MemberController의 list()가 처리합니다.
+
 목록의 회원 이름에는 실제 회원 ID가 들어간 상세 링크가 연결되며, 컨트롤러는 URL의 {id}를 @PathVariable로 받습니다. 목록의 #lists.isEmpty(members)는 회원 목록이 비어 있는지 확인하는 Thymeleaf 기능으로, 회원이 없을 때 안내 문구를 표시합니다.
 
 findMember()는 회원을 조회하고, 찾지 못하면 조회 대상이 없음을 나타내는 NoSuchElementException을 발생시킵니다. 뒤에서 작성하는 공통 오류 처리기가 이 예외를 404 응답으로 바꾸어 안내 화면을 보여 줍니다.
@@ -775,9 +807,9 @@ findMember()는 회원을 조회하고, 찾지 못하면 조회 대상이 없음
 
 **실행과 예상 결과**
 
-/members에서 이름을 눌러 상세 화면을 엽니다. ID를 직접 외워 입력하지 않아도 됩니다.
+컨트롤러와 템플릿 작성을 마친 뒤 spring-mvc의 DemoApplication을 다시 실행하고 http://localhost:8080 으로 접속합니다. 브라우저 주소가 /members로 바뀌고 회원 4명의 목록이 표시되는지 확인합니다.
 
-회원 4명의 목록이 보이고 선택한 회원의 이름·이메일·나이를 확인할 수 있습니다. 상세에서 수정이나 목록으로 이동할 수 있습니다.
+목록에서 이름을 눌러 상세 화면을 열면 선택한 회원의 이름·이메일·나이를 확인할 수 있습니다. 상세 화면의 목록 링크로 돌아온 뒤 http://localhost:8080/members 에 직접 접속해도 같은 목록이 표시되는지 확인합니다.
 
 ### 4.3.2 회원 등록
 
