@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 
@@ -32,6 +33,15 @@ public class GlobalExceptionHandler {
         // Model의 status와 message는 오류 화면에 표시할 값이다.
         model.addAttribute("status", 404);
         model.addAttribute("message", ex.getMessage());
+        return "error";
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleResourceNotFound(Model model) {
+        // 정적 파일 누락은 서버 오류가 아니므로 404로 응답하고 오류 로그를 남기지 않는다.
+        model.addAttribute("status", 404);
+        model.addAttribute("message", "요청한 파일을 찾을 수 없습니다.");
         return "error";
     }
 

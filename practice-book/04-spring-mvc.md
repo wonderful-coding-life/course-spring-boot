@@ -1463,7 +1463,7 @@ public String detail(@PathVariable("id") Long id, Model model) {
 
 ### 4.6.1 400·404·409·500 예외 처리
 
-숫자 변환 실패, 조회 대상 없음, DB 제약 위반, 예상하지 못한 오류를 구분해 같은 오류 화면에 전달합니다.
+숫자 변환 실패, 조회 대상이나 정적 파일 없음, DB 제약 위반, 예상하지 못한 오류를 구분해 같은 오류 화면에 전달합니다.
 
 **실습 코드**
 
@@ -1480,6 +1480,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 
@@ -1504,6 +1505,15 @@ public class GlobalExceptionHandler {
         // Model의 status와 message는 오류 화면에 표시할 값이다.
         model.addAttribute("status", 404);
         model.addAttribute("message", ex.getMessage());
+        return "error";
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleResourceNotFound(Model model) {
+        // 정적 파일 누락은 서버 오류가 아니므로 404로 응답하고 오류 로그를 남기지 않는다.
+        model.addAttribute("status", 404);
+        model.addAttribute("message", "요청한 파일을 찾을 수 없습니다.");
         return "error";
     }
 
@@ -1554,11 +1564,17 @@ public class GlobalExceptionHandler {
 
 숫자로 받을 ID에 문자가 들어오는 등 요청값을 필요한 자료형으로 바꾸지 못하면 MethodArgumentTypeMismatchException이 발생하며, 여기서는 400으로 응답합니다. 조회 대상이 없을 때의 NoSuchElementException은 404로, DB 제약 위반인 DataIntegrityViolationException은 409로 처리합니다.
 
+이미지나 아이콘 같은 정적 파일을 찾지 못하면 NoResourceFoundException이 발생합니다. 이 예외는 전용 메서드에서 404로 처리하며, 오류 로그를 남기지 않습니다. 여러 처리 메서드가 같은 예외를 받을 수 있으면 더 구체적인 예외 타입을 지정한 메서드가 선택되므로, 정적 파일 누락은 Exception을 받는 메서드로 전달되지 않습니다.
+
+브라우저는 탭 아이콘을 표시하기 위해 /favicon.ico를 요청할 수 있습니다. 프로젝트에는 스프링 부트를 잎과 전원 기호로 표현한 아이콘을 src/main/resources/static/favicon.ico에 두었으며, 이 위치의 정적 파일은 /favicon.ico로 제공됩니다.
+
 그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, log.error("문구", ex)로 안내 문구와 예외의 상세 내용을 로그에 기록합니다. 사용자 화면에는 정해진 메시지만 표시하며, 회원 등록의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
 
 **실행과 예상 결과**
 
 `/members/abc`, `/articles/abc`에 접속해 숫자 변환 오류를 확인하고, 없는 숫자 ID의 회원·게시글도 조회합니다. 기본 회원 등록에서 기존 이메일로 등록해 DB 예외도 확인합니다. 브라우저 Network에서 상태 코드를 확인합니다.
+
+`/missing.png`처럼 존재하지 않는 정적 파일을 요청하면 404 오류 화면이 표시되고 서버 로그에 오류 스택이 남지 않는지 확인합니다. `/favicon.ico` 요청은 200으로 응답하며 아이콘을 반환합니다.
 
 응답 상태와 화면에 표시된 내용은 다음 기준으로 비교합니다.
 
@@ -1566,6 +1582,7 @@ public class GlobalExceptionHandler {
 |---|---|---|
 | /members/abc처럼 숫자 ID에 문자 전달 | 400 | 숫자로 입력할 값을 확인하도록 안내하는 오류 화면 |
 | 존재하지 않는 숫자 ID 조회 | 404 | 회원 또는 게시글을 찾을 수 없다는 오류 화면 |
+| 존재하지 않는 정적 파일 요청 | 404 | 요청한 파일을 찾을 수 없다는 오류 화면 |
 | 기본 등록에서 중복 이메일 저장 | 409 | DB 제약 위반을 안내하는 오류 화면 |
 | 검증 등록에서 잘못된 입력 또는 이메일 중복 | 200 | 입력값과 필드별 오류를 유지한 등록 화면 |
 | 예상하지 못한 서버 오류 | 500 | 공통 오류 화면 |
