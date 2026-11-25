@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.entity.Member;
 import com.example.demo.repository.MemberRepository;
 import com.example.demo.service.MemberService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +42,14 @@ public class MemberController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Member create(@RequestBody Member member) {
+        // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
+        member.setId(null);
+        return memberRepository.save(member);
+    }
+
+    @PostMapping("/valid")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Member createValid(@Valid @RequestBody Member member) {
         // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
         member.setId(null);
         return memberRepository.save(member);

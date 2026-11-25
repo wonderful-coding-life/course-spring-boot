@@ -5,7 +5,7 @@
 
 RESTful API는 클라이언트가 HTTP 요청으로 서버의 데이터를 조회하고 변경할 수 있도록 제공하는 인터페이스입니다. 이 예제에서는 회원을 /members, 게시글을 /articles라는 주소로 표현합니다. 클라이언트가 주소와 HTTP 메서드, 필요한 데이터를 보내면 서버는 요청한 작업을 수행하고 처리 결과를 응답합니다.
 
-이 장은 Member로 기본 API를 만든 뒤 Article에서 Service와 DTO를 배웁니다. 여러 회원 가입을 묶는 트랜잭션을 실습하고, 마지막에 결과를 자동으로 검증하는 테스트를 작성합니다.
+이 장은 Member로 기본 API와 요청 객체 검증을 익힌 뒤 Article에서 Service와 DTO를 배웁니다. 여러 회원 가입을 묶는 트랜잭션을 실습하고, 마지막에 결과를 자동으로 검증하는 테스트를 작성합니다.
 
 **준비**: spring-rest를 열고 MariaDB 환경변수를 설정합니다. 공통 schema.sql·data.sql로 회원 4명과 게시글 100개를 준비합니다. DemoApplication을 실행하고 members.http(`spring-rest/http/members.http`), articles.http(`spring-rest/http/articles.http`)를 IDE에서 엽니다. 웹 앱을 동시에 같은 8080 포트로 실행하지 않습니다.
 
@@ -16,16 +16,17 @@ RESTful API는 클라이언트가 HTTP 요청으로 서버의 데이터를 조�
 
 **프로젝트 생성과 의존성 선택**
 
-Spring Initializr에서 다음 의존성을 선택하고, 생성한 프로젝트 폴더를 `spring-rest`로 준비합니다.
+Spring Initializr에서 Spring Web, Spring Data JPA, Validation, MariaDB Driver, Lombok을 선택하고, 생성한 프로젝트 폴더를 `spring-rest`로 준비합니다. Validation은 뒤에서 회원 등록 요청의 이름과 이메일을 검사할 때 사용합니다.
 
 | 의존성 | 역할 |
 |---|---|
 | Spring Web | Controller에서 HTTP 요청을 받고 JSON을 응답합니다. |
 | Spring Data JPA | Repository로 회원과 게시글을 저장하고 조회합니다. |
+| Validation | 요청 객체의 필드에 선언한 입력 조건을 검사합니다. |
 | MariaDB Driver | 기존 실습용 MariaDB에 연결합니다. |
 | Lombok | 생성자와 getter 같은 반복 코드를 줄여 줍니다. |
 
-![REST API 프로젝트 생성 설정과 Spring Web·Spring Data JPA·MariaDB Driver·Lombok 의존성 선택](images/03-restful-api/spring-initializr.png)
+![REST API 프로젝트 생성 설정과 Spring Web·Spring Data JPA·Validation·MariaDB Driver·Lombok 의존성 선택](images/03-restful-api/spring-initializr.png)
 
 **HTTP 요청과 응답의 구성**
 
@@ -149,7 +150,7 @@ Content-Type은 보내는 본문의 형식, Accept는 받고 싶은 응답 형�
 | 삭제 | 8·9: 삭제·재조회 | 기존 회원 4명, 삭제한 ID 조회는 404 |
 | 이름 검색 | 10~12: 이름 검색·결과 없음·빈 조건 조회 | 일치하는 회원 배열·빈 배열·전체 회원 4명 |
 
-MemberController(`spring-rest/src/main/java/com/example/demo/controller/MemberController.java`)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 구조는 JPA 절과 같고, 현재 Repository는 REST에 필요한 이름 검색만 추가합니다.
+MemberController(`spring-rest/src/main/java/com/example/demo/controller/MemberController.java`)의 @RequestMapping("/members")가 모든 메서드의 공통 주소입니다. @RequiredArgsConstructor가 final 필드를 받는 생성자를 만들고 스프링이 Repository와 MemberService를 주입합니다. Member 엔티티의 기본 매핑은 JPA 절과 같으며, 이름과 이메일에 추가한 검증 규칙은 3.2.8절에서 살펴봅니다. 현재 Repository는 REST에 필요한 이름 검색만 추가합니다.
 
 MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 뒤의 API 메서드는 이 클래스 안에 들어갑니다. MemberService는 일괄 가입 실습에서 사용합니다.
 
@@ -463,7 +464,7 @@ GET {{baseUrl}}/members?name=
 Accept: application/json
 ```
 
-[application.properties](../spring-rest/src/main/resources/application.properties)
+[application.properties — 오류 메시지 설정 발췌](../spring-rest/src/main/resources/application.properties)
 
 ```properties
 spring.application.name=demo
@@ -474,8 +475,8 @@ spring.datasource.url=${DB_URL}
 spring.datasource.username=${DB_USER}
 spring.datasource.password=${DB_PASS}
 
-# 기본값 never는 예외 메시지에 담길 수 있는 내부 정보나 민감한 정보의 노출을 막기 위한 것이다.
-# 실습에서는 오류 원인을 확인할 수 있도록 응답의 message 항목에 예외 사유를 포함한다.
+# 컨트롤러의 요청 처리 과정에서 예외가 발생하면 오류 응답의 message 항목에 예외 메시지를 포함한다.
+# 기본값은 never이며, 내부 정보나 민감한 정보의 노출을 방지하기 위한 것이다.
 spring.web.error.include-message=always
 ```
 
@@ -568,6 +569,173 @@ Accept: application/json
 ```
 
 조회 요청의 Accept를 application/json으로 바꾸어 다시 실행하면 같은 회원을 JSON으로 받습니다. 마지막 삭제 요청은 204를 반환하며 본문이 없습니다. 삭제까지 마치면 기존 회원 4명만 남고 이후 일괄 가입 실습도 같은 시작 상태에서 진행할 수 있습니다.
+
+### 3.2.8 Validation으로 요청 객체 검증하기
+
+앞에서는 요청으로 받은 회원 정보를 저장하고 조회했습니다. 이번에는 이름에 공백만 입력하거나 이메일 형식에 맞지 않는 값을 보냈을 때, 저장하기 전에 요청을 거절하도록 검증을 적용합니다. 프로젝트를 생성할 때 선택한 Validation을 사용하면 입력 조건을 필드의 애너테이션으로 선언할 수 있습니다.
+
+DB의 NOT NULL 제약은 null을 막지만 공백만 있는 이름이나 이메일 형식까지 검사하지는 않습니다. 요청 객체에 검증 규칙을 선언하면 이러한 입력 조건을 요청 처리 단계에서 확인할 수 있습니다.
+
+**Member의 검증 규칙**
+
+다음은 spring-rest의 Member 클래스입니다. JPA의 매핑 애너테이션과 함께 선언된 이름·이메일의 검증 규칙을 확인합니다.
+
+[Member.java](../spring-rest/src/main/java/com/example/demo/entity/Member.java)
+
+```java
+package com.example.demo.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+// 클래스명과 테이블명이 다르면 @Table(name), 필드명과 컬럼명이 다르면 @Column(name)으로 매핑한다.
+@Entity
+@Table(name = "member")
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class Member {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+    @Column(name = "name")
+    @NotBlank(message = "이름을 입력하세요")
+    private String name;
+    // 이메일의 NOT NULL, UNIQUE 제약은 sql/schema.sql에서 정의한다.
+    @NotBlank(message = "이메일을 입력하세요")
+    @Email(message = "이메일 형식이 아닙니다")
+    @Column(name = "email")
+    private String email;
+    @Column(name = "age")
+    private Integer age;
+}
+```
+
+이름과 이메일의 @NotBlank는 값이 null이거나 빈 문자열이거나 공백만 있는 경우 검증에 실패하도록 합니다. 이메일에는 @Email도 함께 선언하여 입력 여부와 이메일 형식을 모두 확인합니다. 각 애너테이션의 message에는 검증에 실패했을 때 사용할 안내 문구를 지정합니다.
+
+현재 age에는 검증 규칙이 없으므로 나이의 필수 입력이나 범위를 검사하지 않습니다. @Email은 이메일 형식을 검사하며, 실제 주소의 존재 여부나 중복 여부는 확인하지 않습니다. 이 프로젝트의 이메일 중복은 DB의 UNIQUE 제약으로 제한합니다.
+
+**@Valid로 요청 객체 검증하기**
+
+다음 메서드는 기존 create()와 함께 MemberController 안에 있습니다. 클래스의 공통 경로 /members와 메서드의 /valid가 합쳐져 POST /members/valid 요청을 처리하며, @Valid의 import는 jakarta.validation.Valid입니다.
+
+[MemberController.java — createValid()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
+
+```java
+@PostMapping("/valid")
+@ResponseStatus(HttpStatus.CREATED)
+public Member createValid(@Valid @RequestBody Member member) {
+    // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
+    member.setId(null);
+    return memberRepository.save(member);
+}
+```
+
+@RequestBody는 요청 JSON을 Member 객체로 변환하고, @Valid는 해당 객체의 필드에 선언된 검증 규칙을 적용하도록 합니다. 검증을 통과하면 createValid()의 본문에서 회원을 저장하고 201 Created로 응답합니다.
+
+검증에 실패하면 스프링은 메서드 본문을 실행하기 전에 요청을 거절하고, 기본적으로 400 Bad Request로 응답합니다. 따라서 회원 저장 코드는 실행되지 않으며, @ResponseStatus(HttpStatus.CREATED)를 선언했더라도 검증에 실패한 요청에는 201을 반환하지 않습니다.
+
+**오류 응답에 필드별 정보 표시하기**
+
+[application.properties — 오류 응답 설정 발췌](../spring-rest/src/main/resources/application.properties)
+
+```properties
+# 컨트롤러의 요청 처리 과정에서 예외가 발생하면 오류 응답의 message 항목에 예외 메시지를 포함한다.
+# 기본값은 never이며, 내부 정보나 민감한 정보의 노출을 방지하기 위한 것이다.
+spring.web.error.include-message=always
+# @Valid를 사용한 데이터 검증에 실패하면 오류 응답의 errors 항목에 필드명, 오류 메시지 등의 상세 검증 정보를 포함한다.
+# 기본값은 never이며, 검증에 실패한 입력값이나 내부 검증 정보의 노출을 방지하기 위한 것이다.
+spring.web.error.include-binding-errors=always
+```
+
+include-message는 오류 응답의 message에 예외 메시지를 포함하고, include-binding-errors는 errors에 필드별 오류 정보를 포함하도록 합니다. 검증 자체는 @Valid가 적용하며, 이 설정은 검증 결과를 응답에서 확인하기 위한 것입니다. 기본값 never는 입력값이나 내부 정보의 노출을 제한하기 위한 값이며, 이 실습에서는 오류 내용을 관찰하기 위해 always를 사용합니다.
+
+**실행과 예상 결과**
+
+기본 CRUD와 XML 실습에서 등록한 정혁을 삭제하여 기존 회원 4명만 있는 상태에서 시작합니다. members.http의 요청 13~17을 순서대로 실행하며, 정상 등록 요청은 한 번만 실행합니다.
+
+[members.http — 요청 13~17](../spring-rest/http/members.http)
+
+```http
+### 13. 빈 이름과 잘못된 이메일 검증 (400 Bad Request)
+POST {{baseUrl}}/members/valid
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "   ",
+  "email": "wrong",
+  "age": 10
+}
+
+### 14. 이메일 필수 입력 검증 (400 Bad Request)
+POST {{baseUrl}}/members/valid
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "정혁",
+  "age": 10
+}
+
+### 15. 검증을 통과한 회원 등록 (201 Created)
+POST {{baseUrl}}/members/valid
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "정혁",
+  "email": "JungHyuk@campus.com",
+  "age": 10
+}
+
+> {%
+    // 검증 등록의 응답 ID를 별도 변수에 저장해 앞의 CRUD 실습과 구분한다.
+    client.global.set("validMemberId", response.body.id);
+%}
+
+### 16. 검증 실습 회원 삭제 (204 No Content)
+DELETE {{baseUrl}}/members/{{validMemberId}}
+
+### 17. 검증 실습 후 회원 목록 확인 (200 OK)
+GET {{baseUrl}}/members
+Accept: application/json
+```
+
+| 요청 | 확인할 결과 |
+|---|---|
+| 13: 공백 이름·잘못된 이메일 | 400, name과 email의 검증 오류 |
+| 14: 이메일 생략 | 400, email의 필수 입력 오류 |
+| 15: 정상 회원 등록 | 201, 생성된 회원 ID를 validMemberId에 저장 |
+| 16: 실습 회원 삭제 | 204, 응답 본문 없음 |
+| 17: 회원 목록 확인 | 200, 기존 회원 4명 |
+
+요청 13의 응답에서 status가 400인지 확인하고, errors 배열의 field와 defaultMessage를 찾아봅니다. name에는 ‘이름을 입력하세요’, email에는 ‘이메일 형식이 아닙니다’가 표시됩니다. 오류 항목의 순서는 비교 기준으로 삼지 않습니다.
+
+요청 14에서는 생략한 이메일이 null이 되어 @NotBlank 검증에 실패하고, ‘이메일을 입력하세요’가 표시됩니다. @Email만으로는 필수 입력을 검사하지 않으므로 두 애너테이션을 함께 사용합니다. 두 실패 요청은 회원을 저장하지 않으며, 정상 등록 후에는 응답으로 받은 실제 ID로 삭제해 다음 실습의 시작 상태를 유지합니다.
+
+**참고: 자주 쓰는 Validation 애노테이션**
+
+| 애노테이션 | 검증 규칙 |
+|---|---|
+| @NotNull | null을 허용하지 않습니다. 문자열의 내용은 검사하지 않습니다. |
+| @NotEmpty | null과 빈 문자열·빈 컬렉션·빈 배열을 허용하지 않습니다. 공백 문자열은 허용합니다. |
+| @NotBlank | 문자열이 null이거나 비어 있거나 공백만 있으면 오류입니다. |
+| @Size(min = 2, max = 20) | 문자열 길이나 컬렉션·배열의 크기를 제한합니다. |
+| @Email | 이메일 형식을 검사합니다. 실제 존재하는 주소인지는 확인하지 않습니다. |
+| @Min(0), @Max(150) | 숫자의 최솟값·최댓값을 제한하며 경계값도 허용합니다. |
+| @Positive | 0보다 큰 숫자만 허용합니다. |
+| @PositiveOrZero | 0 이상의 숫자를 허용합니다. |
+| @Pattern(regexp = "[0-9]+") | 정규식과 일치하는 문자열인지 검사합니다. 예시는 숫자로만 된 문자열입니다. |
+| @Past, @Future | 날짜·시간이 현재보다 과거인지·미래인지 검사합니다. |
+
+@Size, @Email, 숫자·날짜·정규식 검증은 null을 허용합니다. 필수값이라면 @NotNull이나 문자열용 @NotBlank를 함께 사용합니다. 위 목록을 모두 외우기보다 현재 실습의 이름·이메일 규칙부터 확인하고, 다른 종류는 필요한 조건이 생겼을 때 참고합니다.
+
 
 ## 3.3 Service와 DTO로 게시글 API 작성
 
@@ -1520,6 +1688,7 @@ DemoApplicationTests의 testContextLoads()는 테스트용 H2 설정으로 스�
 - HTTP 요청의 메서드·URI·헤더·본문과 응답의 상태 코드·헤더·본문을 구분합니다.
 - Content-Type과 Accept를 바꾸었을 때 요청 본문과 응답 형식이 어떻게 달라지는지 설명합니다.
 - @PathVariable·@RequestParam·@RequestBody가 각각 어디의 값을 받는지 설명합니다.
+- @Valid와 필드의 검증 애너테이션이 맡은 역할을 구분하고, 검증 실패 시 기본 400 응답과 필드별 오류를 확인합니다.
 - Member API와 Article API의 계층 구조를 비교합니다.
 - 일괄 저장 중 예외를 밖으로 전달하는 이유를 설명합니다.
 - Mockito의 가짜 Repository와 실제 Service를 구분합니다.
