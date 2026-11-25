@@ -7,21 +7,18 @@
 <body>
 <div th:replace="~{common :: header}"></div>
 <h2>회원 등록</h2>
-<p>정혁 / JungHyuk@campus.com / 10살을 입력해 보세요.</p>
-<!-- 입력값을 Member 엔티티에 담아 등록한다. -->
-<form th:action="@{/members}" th:object="${member}" method="post">
-    <!-- th:field는 회원 객체의 속성과 입력칸을 연결한다. -->
+<form th:action="@{/members}" method="post">
     <p>
         <label for="name">이름</label>
-        <input type="text" th:field="*{name}">
+        <input type="text" id="name" name="name">
     </p>
     <p>
         <label for="email">이메일</label>
-        <input type="email" th:field="*{email}">
+        <input type="text" id="email" name="email">
     </p>
     <p>
-        <label for="age">나이</label>
-        <input type="number" th:field="*{age}">
+        <label for="password">비밀번호</label>
+        <input type="text" id="password" name="password">
     </p>
     <button type="submit">등록하기</button>
 </form>

@@ -36,7 +36,7 @@ public class ArticleController {
     // PageableDefault는 요청에서 생략한 조건의 기본값이다. 페이지 번호는 0부터 시작한다.
     @GetMapping
     public Page<ArticleResponse> findAll(
-            @PageableDefault(size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(page = 0, size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         return articleService.findAll(pageable);
     }
 

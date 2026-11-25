@@ -7,18 +7,13 @@
 <body>
 <div th:replace="~{common :: header}"></div>
 <h2>회원 상세</h2>
-<p th:if="${message != null}" th:text="${message}">안내 메시지</p>
 <div th:object="${member}">
     <p>ID: <span th:text="*{id}">1</span></p>
     <p>이름: <span th:text="*{name}">윤서준</span></p>
     <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
-    <p>나이: <span th:text="*{age}">10</span></p>
 </div>
-<p><a th:href="@{/members/{id}/edit(id=${member.id})}">수정하기</a></p>
-<!-- 데이터가 바뀌는 삭제 요청은 링크의 GET 대신 폼의 POST로 보낸다. -->
-<form th:action="@{/members/{id}/delete(id=${member.id})}" method="post">
-    <button type="submit">삭제하기</button>
-</form>
+<p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
+<p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
 <p><a th:href="@{/members}">목록으로</a></p>
 <div th:replace="~{common :: footer}"></div>
 </body>

@@ -1,10 +1,9 @@
 -- 이 파일은 UTF-8 인코딩으로 저장하고 실행하세요.
 -- schema.sql 실행 후, 빈 테이블에 한 번 실행하세요.
--- 같은 MariaDB를 다음 프로젝트에서 재사용할 때는 데이터를 다시 넣지 마세요.
-INSERT INTO member(name, email, age) VALUES('윤서준', 'SeojunYoon@campus.com', 10);
-INSERT INTO member(name, email, age) VALUES('윤광철', 'KwangcheolYoon@campus.com', 43);
-INSERT INTO member(name, email, age) VALUES('공미영', 'MiyeongKong@campus.com', 23);
-INSERT INTO member(name, email, age) VALUES('김도윤', 'DoyunKim@campus.com', 10);
+INSERT INTO member(name, email, password) VALUES('윤서준', 'SeojunYoon@campus.com', '$2a$10$abcdefghijklmnopqrstuu6VFZE.TtiJ2cr5lBUZZkdTY8FkA5ul2');
+INSERT INTO member(name, email, password) VALUES('윤광철', 'KwangcheolYoon@campus.com', '$2a$10$abcdefghijklmnopqrstuu6VFZE.TtiJ2cr5lBUZZkdTY8FkA5ul2');
+INSERT INTO member(name, email, password) VALUES('공미영', 'MiyeongKong@campus.com', '$2a$10$abcdefghijklmnopqrstuu6VFZE.TtiJ2cr5lBUZZkdTY8FkA5ul2');
+INSERT INTO member(name, email, password) VALUES('김도윤', 'DoyunKim@campus.com', '$2a$10$abcdefghijklmnopqrstuu6VFZE.TtiJ2cr5lBUZZkdTY8FkA5ul2');
 
 -- 회원 4명이 먼저 등록되어 있어야 한다. 이메일로 실제 회원 ID를 한 번씩 조회한다.
 -- @로 시작하는 세션 변수는 MariaDB/MySQL과 H2에서 지원하며, 현재 연결에서만 유지되고 연결 종료 시 사라진다.

@@ -20,6 +20,6 @@ public class Member {
     // 이메일의 NOT NULL, UNIQUE 제약은 resources/schema.sql에서 정의한다.
     @Column(name = "email")
     private String email;
-    @Column(name = "age")
-    private Integer age;
+    @Column(name = "password")
+    private String password;
 }

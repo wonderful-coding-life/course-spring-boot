@@ -1,13 +1,11 @@
 package com.example.demo.form;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-// 회원 등록의 검증 버전에서 사용할 입력값과 검증 규칙을 모은다.
+// 회원가입의 입력값과 검증 규칙을 모으며, 확인용 비밀번호는 저장하지 않는다.
 @Data
 public class MemberForm {
     @NotBlank(message = "이름을 입력하세요.")
@@ -19,7 +17,10 @@ public class MemberForm {
     @Size(max = 256, message = "이메일은 256자 이하로 입력하세요.")
     private String email;
 
-    @NotNull(message = "나이를 입력하세요.")
-    @Min(value = 0, message = "나이는 0 이상으로 입력하세요.")
-    private Integer age;
+    @NotBlank(message = "비밀번호를 입력하세요.")
+    @Size(min = 8, message = "비밀번호는 8자 이상으로 입력하세요.")
+    private String password;
+
+    @NotBlank(message = "비밀번호 확인을 입력하세요.")
+    private String passwordConfirm;
 }

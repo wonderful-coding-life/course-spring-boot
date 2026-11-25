@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+</head>
+<body>
+<div th:replace="~{common :: header}"></div>
+<h2>회원가입</h2>
+<p>정혁 / JungHyuk@campus.com / password123으로 가입해 보세요.</p>
+<!-- novalidate로 브라우저 검증을 끄고 서버의 오류 메시지를 확인한다. -->
+<form th:action="@{/signup}" th:object="${memberForm}" method="post" novalidate>
+    <p>
+        <label for="name">이름</label>
+        <input type="text" th:field="*{name}">
+        <span th:errors="*{name}"></span>
+    </p>
+    <p>
+        <label for="email">이메일</label>
+        <input type="email" th:field="*{email}">
+        <span th:errors="*{email}"></span>
+    </p>
+    <p>
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password" autocomplete="new-password">
+        <span th:errors="*{password}"></span>
+    </p>
+    <p>
+        <label for="passwordConfirm">비밀번호 확인</label>
+        <input type="password" id="passwordConfirm" name="passwordConfirm" autocomplete="new-password">
+        <span th:errors="*{passwordConfirm}"></span>
+    </p>
+    <button type="submit">가입하기</button>
+</form>
+<p><a th:href="@{/members}">목록으로</a></p>
+<div th:replace="~{common :: footer}"></div>
+</body>
+</html>

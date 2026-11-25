@@ -12,7 +12,6 @@
         <th>ID</th>
         <th>이름</th>
         <th>이메일</th>
-        <th>나이</th>
         <th>수정</th>
     </tr>
 
@@ -21,8 +20,7 @@
         <td th:text="${member.id}">1</td>
         <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
         <td th:text="${member.email}">SeojunYoon@campus.com</td>
-        <td th:text="${member.age}">10</td>
-        <td><a th:href="@{/members/{id}/edit(id=${member.id})}">수정</a></td>
+        <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
     </tr>
 
 </table>

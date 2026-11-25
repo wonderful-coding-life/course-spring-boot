@@ -27,7 +27,7 @@ Thymeleaf는 HTML 템플릿에 데이터를 넣어 완성된 HTML을 만드는 �
 
 1. spring-thymeleaf에서 DB 없이 값 출력·조건·반복·폼을 연습합니다.
 2. spring-mvc에서 H2의 실제 데이터를 웹 화면으로 조회·등록·수정·삭제합니다.
-3. 같은 회원 등록에 검증을 추가한 버전을 비교합니다.
+3. 기본 CRUD에 이어 회원가입에서 입력 검증과 오류 메시지를 확인합니다.
 4. 게시글 관계·페이징과 공통 오류 화면으로 확장합니다.
 
 두 프로젝트를 동시에 8080 포트로 실행하지 않습니다. 단계가 바뀔 때 앞 앱을 종료합니다.
@@ -565,7 +565,7 @@ common.html의 하단 안내 문구를 바꾸고 앱을 재시작하거나 템�
 |---|---|
 | Spring Web | 화면의 조회·등록·수정·삭제 요청을 처리합니다. |
 | Thymeleaf | 회원과 게시글 데이터를 HTML로 표시합니다. |
-| Validation | 이름·이메일·나이 등의 입력 규칙을 검사합니다. |
+| Validation | 이름·이메일·비밀번호 등의 입력 규칙을 검사합니다. |
 | Spring Data JPA | Repository로 회원과 게시글을 저장하고 조회합니다. |
 | H2 Database | 메모리에서 실행되는 실습용 DB를 제공합니다. |
 | Lombok | 생성자·getter 등의 반복 코드를 줄여 줍니다. |
@@ -590,8 +590,12 @@ spring.application.name=demo
 # 브라우저에서 /h2-console로 H2 데이터베이스를 확인한다.
 spring.h2.console.enabled=true
 
-# 테이블은 schema.sql로 생성하므로 JPA의 자동 생성을 끈다.
+# JPA의 테이블 자동 생성 기능을 사용하지 않는다.
 spring.jpa.hibernate.ddl-auto=none
+
+# schema.sql과 data.sql을 실행하여 테이블을 생성하고 초기 데이터를 저장한다.
+# 기본값은 embedded(내장 DB만 해당)이며, always는 외부 DB에서도 실행한다.
+spring.sql.init.mode=always
 ```
 
 [schema.sql](../spring-mvc/src/main/resources/schema.sql)
@@ -603,7 +607,7 @@ CREATE TABLE IF NOT EXISTS member (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
     email VARCHAR(256) NOT NULL UNIQUE,
-    age INTEGER
+    password VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS article (
@@ -621,9 +625,9 @@ CREATE TABLE IF NOT EXISTS article (
 
 `spring.jpa.hibernate.ddl-auto=none`은 Hibernate의 자동 테이블 생성 기능을 끄는 설정입니다. 이 실습에서는 schema.sql이 테이블 생성을 담당하고, data.sql이 초기 데이터를 등록합니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원하므로, 같은 구조의 테이블을 준비할 수 있습니다.
 
-SQL 초기화 스크립트의 실행 범위를 정하는 `spring.sql.init.mode`의 기본값은 `embedded`입니다. 현재 실습은 H2 내장 메모리 DB를 사용하므로, `spring.sql.init.mode=always`를 별도로 설정하지 않아도 스크립트가 자동으로 실행됩니다.
+`spring.sql.init.mode=always`는 내장 DB뿐 아니라 외부 DB에서도 schema.sql과 data.sql을 실행하도록 지정합니다. 기본값인 `embedded`는 내장 DB에서만 스크립트를 실행하므로 현재 H2 메모리 DB에서도 초기화가 수행되지만, 이 예제에서는 DB 종류와 관계없이 SQL 스크립트로 초기화하도록 `always`를 명시합니다.
 
-data.sql은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 해당 파일을 src/main/resources에 준비하면 회원 4명과 회원별 게시글 25개가 등록되어, 앱을 시작할 때마다 같은 상태에서 실습할 수 있습니다.
+data.sql은 MVC용 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용하며, 회원 비밀번호는 모두 `password123`입니다. 해당 파일을 src/main/resources에 준비하면 회원 4명과 회원별 게시글 25개가 등록되어, 앱을 시작할 때마다 같은 상태에서 실습할 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -643,7 +647,7 @@ member는 4, article은 100이 조회됩니다. H2 메모리 DB는 앱을 종료
 > **본 교재 참고**  
 > 5.1.1 「웹 애플리케이션 아키텍처와 MVC 패턴」, 5.4.6 「관리자 기능 구현」
 
-화면 CRUD에서는 입력 화면을 여는 GET과 입력값을 처리하는 POST를 나눕니다. 브라우저가 보낸 폼 값을 @ModelAttribute로 받아 회원을 저장하고, 조회 결과는 Model을 통해 화면으로 전달합니다. 기본 등록·수정에서는 Member 엔티티를 그대로 사용해 이 흐름에 집중합니다.
+화면 CRUD에서는 입력 화면을 여는 GET과 입력값을 처리하는 POST를 나눕니다. 브라우저가 보낸 폼 값을 Member 엔티티로 받아 저장하고, 조회 결과는 Model을 통해 화면으로 전달합니다. 이 절에서는 생성·수정의 기본 흐름을 익히고, 다음 절의 회원가입에서 별도 폼 객체와 입력 검증을 도입합니다.
 
 **시작 상태와 실행 순서**
 
@@ -652,21 +656,20 @@ spring-mvc를 새로 실행해 회원 4명과 게시글 100개가 준비된 상�
 | 단계 | 수행할 작업 | 회원 상태 |
 |---|---|---|
 | 목록·상세 조회 | 기존 샘플을 조회합니다. | 회원 4명 |
-| 기본 등록 | 정혁을 한 번 등록합니다. | 회원 5명 |
-| 수정 | 등록한 정혁의 나이를 11로 바꿉니다. | 회원 5명, 정혁은 11살 |
+| 등록 | 정혁을 한 번 등록합니다. | 회원 5명 |
+| 수정 | 등록한 정혁의 이름을 정혁수로 바꿉니다. | 회원 5명, 이름 변경 |
 | 삭제 | 새로 등록한 정혁을 삭제합니다. | 기존 회원 4명 |
 | 삭제 제한 확인 | 게시글을 작성한 샘플 회원의 삭제를 시도합니다. | 삭제되지 않아 회원 4명 유지 |
 
-아래 실습의 MemberController(`spring-mvc/src/main/java/com/example/demo/controller/MemberController.java`)는 MemberRepository와 ArticleRepository를 주입받습니다. 회원·게시글 엔티티 구조는 JPA 장과 같고, ArticleRepository.existsByMember()는 작성한 글이 있는지 확인할 때 사용합니다. 로그인 기능은 아직 없습니다.
+아래 실습의 MemberController(`spring-mvc/src/main/java/com/example/demo/controller/MemberController.java`)는 MemberRepository를 주입받습니다. 회원 엔티티는 JPA 장의 age 대신 password를 사용합니다. 로그인 기능은 아직 없습니다.
 
-MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 목록·상세·등록·수정·삭제와 뒤의 검증 메서드를 모두 같은 클래스에서 살펴봅니다.
+MemberController의 선언부와 주입 필드는 다음과 같습니다. 메서드를 제외한 발췌이며, 목록·상세·등록·수정·삭제 메서드를 모두 같은 클래스에서 살펴봅니다.
 
 ```java
 @Controller
 @RequiredArgsConstructor
 public class MemberController {
     private final MemberRepository memberRepository;
-    private final ArticleRepository articleRepository;
 }
 ```
 
@@ -744,7 +747,6 @@ private Member findMember(Long id) {
         <th>ID</th>
         <th>이름</th>
         <th>이메일</th>
-        <th>나이</th>
         <th>수정</th>
     </tr>
 
@@ -753,8 +755,7 @@ private Member findMember(Long id) {
         <td th:text="${member.id}">1</td>
         <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
         <td th:text="${member.email}">SeojunYoon@campus.com</td>
-        <td th:text="${member.age}">10</td>
-        <td><a th:href="@{/members/{id}/edit(id=${member.id})}">수정</a></td>
+        <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
     </tr>
 
 </table>
@@ -777,18 +778,13 @@ private Member findMember(Long id) {
 <body>
 <div th:replace="~{common :: header}"></div>
 <h2>회원 상세</h2>
-<p th:if="${message != null}" th:text="${message}">안내 메시지</p>
 <div th:object="${member}">
     <p>ID: <span th:text="*{id}">1</span></p>
     <p>이름: <span th:text="*{name}">윤서준</span></p>
     <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
-    <p>나이: <span th:text="*{age}">10</span></p>
 </div>
-<p><a th:href="@{/members/{id}/edit(id=${member.id})}">수정하기</a></p>
-<!-- 데이터가 바뀌는 삭제 요청은 링크의 GET 대신 폼의 POST로 보낸다. -->
-<form th:action="@{/members/{id}/delete(id=${member.id})}" method="post">
-    <button type="submit">삭제하기</button>
-</form>
+<p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
+<p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
 <p><a th:href="@{/members}">목록으로</a></p>
 <div th:replace="~{common :: footer}"></div>
 </body>
@@ -809,40 +805,62 @@ findMember()는 회원을 조회하고, 찾지 못하면 조회 대상이 없음
 
 컨트롤러와 템플릿 작성을 마친 뒤 spring-mvc의 DemoApplication을 다시 실행하고 http://localhost:8080 으로 접속합니다. 브라우저 주소가 /members로 바뀌고 회원 4명의 목록이 표시되는지 확인합니다.
 
-목록에서 이름을 눌러 상세 화면을 열면 선택한 회원의 이름·이메일·나이를 확인할 수 있습니다. 상세 화면의 목록 링크로 돌아온 뒤 http://localhost:8080/members 에 직접 접속해도 같은 목록이 표시되는지 확인합니다.
+목록에서 이름을 눌러 상세 화면을 열면 선택한 회원의 이름·이메일을 확인할 수 있습니다. 비밀번호는 목록과 상세 화면에 표시하지 않습니다. 상세 화면의 목록 링크로 돌아온 뒤 http://localhost:8080/members 에 직접 접속해도 같은 목록이 표시되는지 확인합니다.
 
 ### 4.3.2 회원 등록
 
-회원을 등록한 뒤 결과 화면을 바로 보여 주면, 사용자가 새로고침할 때 같은 등록 요청을 다시 보낼 수 있습니다. 저장을 마친 뒤에는 브라우저가 회원 목록을 새로 조회하도록 리다이렉트하여, 새로고침해도 조회 요청만 반복되도록 합니다.
-
-등록 화면을 열 때는 빈 Member를 입력칸과 연결하고, 제출된 값을 저장한 뒤 redirect로 목록의 GET 요청으로 이동합니다.
+등록 화면의 입력값을 Member 엔티티로 받아 저장합니다. 이번 단계에서는 name 속성과 엔티티 속성의 연결, 저장 후 목록으로 이동하는 흐름에 집중합니다.
 
 **실습 코드**
 
-[MemberController.java — addForm()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
+[Member.java](../spring-mvc\src\main\java\com\example\demo\entity\Member.java)
 
 ```java
-@GetMapping("/members/new")
-public String addForm(@ModelAttribute("member") Member member) {
-    // 빈 회원 객체를 전달해 입력칸과 연결한다.
-    return "member-add";
+package com.example.demo.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+// 클래스명과 테이블명이 다르면 @Table(name), 필드명과 컬럼명이 다르면 @Column(name)으로 매핑한다.
+@Entity
+@Table(name = "member")
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class Member {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+    @Column(name = "name")
+    private String name;
+    // 이메일의 NOT NULL, UNIQUE 제약은 resources/schema.sql에서 정의한다.
+    @Column(name = "email")
+    private String email;
+    @Column(name = "password")
+    private String password;
 }
 ```
 
-[MemberController.java — add()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
+[MemberController.java — addForm()·add()](../spring-mvc\src\main/java/com/example/demo/controller/MemberController.java)
 
 ```java
+@GetMapping("/members/new")
+public String addForm() {
+    return "member-add";
+}
+
 @PostMapping("/members")
-public String add(@ModelAttribute("member") Member member) {
-    // 입력한 값을 엔티티로 받고, ID는 DB가 새로 부여하게 한다.
+public String add(Member member) {
+    // 신규 회원의 ID는 DB가 부여하도록 비운다.
     member.setId(null);
     memberRepository.save(member);
-    // 저장 후 목록으로 이동해 새로고침해도 다시 등록되지 않게 한다.
     return "redirect:/members";
 }
 ```
 
-[member-add.html](../spring-mvc/src/main/resources/templates/member-add.html)
+[member-add.html](../spring-mvc\src\main\resources\templates\member-add.html)
 
 ```html
 <!DOCTYPE html>
@@ -854,21 +872,18 @@ public String add(@ModelAttribute("member") Member member) {
 <body>
 <div th:replace="~{common :: header}"></div>
 <h2>회원 등록</h2>
-<p>정혁 / JungHyuk@campus.com / 10살을 입력해 보세요.</p>
-<!-- 입력값을 Member 엔티티에 담아 등록한다. -->
-<form th:action="@{/members}" th:object="${member}" method="post">
-    <!-- th:field는 회원 객체의 속성과 입력칸을 연결한다. -->
+<form th:action="@{/members}" method="post">
     <p>
         <label for="name">이름</label>
-        <input type="text" th:field="*{name}">
+        <input type="text" id="name" name="name">
     </p>
     <p>
         <label for="email">이메일</label>
-        <input type="email" th:field="*{email}">
+        <input type="text" id="email" name="email">
     </p>
     <p>
-        <label for="age">나이</label>
-        <input type="number" th:field="*{age}">
+        <label for="password">비밀번호</label>
+        <input type="text" id="password" name="password">
     </p>
     <button type="submit">등록하기</button>
 </form>
@@ -880,65 +895,40 @@ public String add(@ModelAttribute("member") Member member) {
 
 **코드 설명**
 
-GET /members/new의 @ModelAttribute가 빈 객체를 준비하며, 폼의 th:object 이름 member를 컨트롤러에서 사용하는 이름과 맞춥니다. POST /members는 입력값을 엔티티로 받아 ID를 비우고 저장합니다.
+GET /members/new는 빈 객체를 준비하지 않고 화면 이름만 반환합니다. HTML 입력칸의 name을 Member의 name·email·password와 맞추면, 스프링이 POST 요청의 값을 엔티티에 연결합니다. Member처럼 복합 객체를 받는 매개변수는 @ModelAttribute를 생략해도 폼 바인딩 대상으로 처리됩니다.
 
-`return "member-add"`는 템플릿으로 화면을 만드는 응답입니다. `return "redirect:/members"`는 브라우저에 다른 주소로 다시 요청하도록 안내합니다.
+add()는 ID를 비워 DB가 새 ID를 부여하도록 하고 save()로 저장합니다. @Valid를 사용하지 않으므로 필수 입력이나 길이, 이메일 형식 등을 검사하지 않으며, DB의 NOT NULL·UNIQUE 같은 제약은 그대로 적용됩니다. 이번 단계에서는 비밀번호를 문자열 그대로 저장하고 해시는 이후 Spring Security 프로젝트에서 다룹니다.
+
+저장 후 redirect:/members를 반환하면 브라우저가 목록을 새로 조회합니다. POST의 302 응답에 이어 GET /members의 200 응답을 받으며, 목록에서 새로고침해도 조회 요청만 반복됩니다.
 
 **실행과 예상 결과**
 
-정혁 / JungHyuk@campus.com / 10으로 등록합니다.
-
-등록이 끝나면 회원 목록에 다음 행이 추가됩니다. 아래 표는 예상 화면에서 확인할 값이며, ID에는 실제 DB가 생성한 값이 표시됩니다.
-
-| ID | 이름 | 이메일 | 나이 |
-|---|---|---|---|
-| 생성된 ID | 정혁 | JungHyuk@campus.com | 10 |
-
-목록에는 기존 회원을 포함해 5명이 표시됩니다. 브라우저 개발자 도구의 Network에서는 등록 POST의 302 응답과, 이어지는 목록 GET의 200 응답을 확인할 수 있습니다.
-
-이처럼 처리 후 다른 주소로 다시 요청하도록 안내하는 것을 리다이렉트라고 합니다. Model에 데이터를 넣고 템플릿을 바로 반환하는 경우와 달리 브라우저가 새 요청을 보냅니다. 목록 컨트롤러는 그 새 요청에서 DB를 다시 조회하고 Model을 준비합니다.
-
-| 순서 | 요청·응답 | 결과 |
-|---|---|---|
-| 1 | POST /members | 회원을 저장합니다. |
-| 2 | 302 이동 응답 | 브라우저에 /members를 다시 요청하도록 안내합니다. |
-| 3 | GET /members | 저장된 회원을 포함한 목록을 조회해 표시합니다. |
-
-등록 후 표시된 목록에서 새로고침하면 GET 조회만 반복됩니다. 앞의 DB 없는 폼 예제에서 POST 결과 화면을 바로 반환했을 때와 비교하면, 리다이렉트를 사용하는 이유를 이해할 수 있습니다.
+정혁 / JungHyuk@campus.com / password123을 입력하여 등록합니다. 목록에는 기존 회원을 포함해 5명이 표시되며, 생성된 ID와 이름·이메일을 확인합니다. 목록과 상세 화면에는 비밀번호를 표시하지 않습니다.
 
 ### 4.3.3 회원 수정
 
-수정 화면에는 기존 값을 채워 보여 주고, 저장 요청에서는 URL ID로 찾은 회원을 갱신합니다.
+수정 화면에는 조회한 Member의 값을 표시하고, 제출된 값을 다시 Member로 받아 저장합니다. 화면을 열 때는 쿼리 매개변수로 ID를 받고, 저장할 때는 hidden 입력값으로 전달합니다.
 
 **실습 코드**
 
-[MemberController.java — editForm()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
+[MemberController.java — editForm()·edit()](../spring-mvc\src\main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-@GetMapping("/members/{id}/edit")
-public String editForm(@PathVariable("id") Long id, Model model) {
+@GetMapping("/members/edit")
+public String editForm(@RequestParam("id") Long id, Model model) {
     model.addAttribute("member", findMember(id));
     return "member-edit";
 }
-```
 
-[MemberController.java — edit()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
-
-```java
-@PostMapping("/members/{id}/edit")
-public String edit(@PathVariable("id") Long id,
-                   @ModelAttribute("member") Member member) {
-    // URL의 ID로 회원을 찾고, 입력한 값으로 바꾸어 저장한다.
-    Member found = findMember(id);
-    found.setName(member.getName());
-    found.setEmail(member.getEmail());
-    found.setAge(member.getAge());
-    memberRepository.save(found);
+@PostMapping("/members/edit")
+public String edit(Member member) {
+    // hidden으로 전달된 ID와 입력값을 담은 엔티티를 저장한다.
+    memberRepository.save(member);
     return "redirect:/members";
 }
 ```
 
-[member-edit.html](../spring-mvc/src/main/resources/templates/member-edit.html)
+[member-edit.html](../spring-mvc\src\main\resources\templates\member-edit.html)
 
 ```html
 <!DOCTYPE html>
@@ -950,24 +940,23 @@ public String edit(@PathVariable("id") Long id,
 <body>
 <div th:replace="~{common :: header}"></div>
 <h2>회원 수정</h2>
-<!-- 조회한 Member 엔티티의 값을 입력칸에 표시한다. 수정 대상 ID는 URL로 보낸다. -->
-<form th:action="@{/members/{id}/edit(id=${member.id})}" th:object="${member}" method="post">
-    <!-- th:field는 회원 객체의 속성과 입력칸을 연결한다. -->
+<form th:action="@{/members/edit}" method="post">
+    <input type="hidden" name="id" th:value="${member.id}">
     <p>
         <label for="name">이름</label>
-        <input type="text" th:field="*{name}">
+        <input type="text" id="name" name="name" th:value="${member.name}">
     </p>
     <p>
         <label for="email">이메일</label>
-        <input type="email" th:field="*{email}">
+        <input type="text" id="email" name="email" th:value="${member.email}">
     </p>
     <p>
-        <label for="age">나이</label>
-        <input type="number" th:field="*{age}">
+        <label for="password">비밀번호</label>
+        <input type="text" id="password" name="password" th:value="${member.password}">
     </p>
-    <button type="submit">수정하기</button>
+    <button type="submit">저장하기</button>
 </form>
-<p><a th:href="@{/members/{id}(id=${member.id})}">취소하기</a></p>
+<p><a th:href="@{/members}">목록으로</a></p>
 <div th:replace="~{common :: footer}"></div>
 </body>
 </html>
@@ -975,32 +964,28 @@ public String edit(@PathVariable("id") Long id,
 
 **코드 설명**
 
-폼의 th:field가 조회한 회원 값을 표시하고, 수정 대상의 ID는 폼을 전송할 URL에 넣습니다. 저장할 때는 그 ID로 찾은 기존 엔티티에 name·email·age를 복사하므로, POST 본문의 id를 바꾸어 수정 대상을 지정하는 구조가 아닙니다.
+목록과 상세 화면의 수정 링크는 /members/edit?id=회원ID로 연결됩니다. @RequestParam("id")는 URL의 쿼리 매개변수 id를 받아 Long으로 변환하며, editForm()은 조회한 회원을 member라는 이름으로 Model에 넣습니다. 상세 조회의 @PathVariable이 경로의 일부를 받는 것과 비교합니다.
+
+템플릿의 th:value는 입력칸에 기존 값을 채웁니다. hidden 입력칸은 ID를 화면에 표시하지 않고 함께 전송하며, POST /members/edit는 ID·이름·이메일·비밀번호가 담긴 Member를 받아 save()로 저장합니다. 이 예제는 기존 회원의 유효한 ID를 전송하는 것을 전제로 하며, hidden 값도 사용자가 변경할 수 있는 요청값입니다.
+
+수정에서는 별도의 입력 검증이나 비밀번호 확인을 하지 않습니다. 비밀번호도 표시된 값을 그대로 제출하여 저장하므로 입력란을 비우면 빈 문자열로 변경됩니다. 생성과 수정 모두 저장 후 회원 목록으로 이동합니다.
 
 **실행과 예상 결과**
 
-등록한 정혁의 나이를 11로 수정하고 목록·상세에서 확인합니다.
+등록한 정혁의 수정 링크를 눌러 주소가 /members/edit?id=실제ID인지 확인합니다. 기존 이름·이메일·비밀번호가 표시되며, 이름을 정혁수로 바꾸어 저장하면 회원 수는 5명으로 유지되고 이름만 바뀝니다. 비밀번호를 newpass123으로 바꾼 뒤 수정 화면을 다시 열면 변경된 값이 표시됩니다.
 
-이름·이메일은 유지되고 나이가 11로 표시됩니다. DB 변경은 HTTP 요청이 처리되면 유지되지만 H2 앱을 재시작하면 초기화됩니다.
+### 4.3.4 회원 삭제
 
-### 4.3.4 회원 삭제와 안내 메시지
-
-게시글의 작성자인 회원을 삭제하면 기존 글과 작성자의 연결에 문제가 생기므로, 먼저 작성한 글이 있는지 확인해야 합니다. 삭제할 수 없는 경우에는 상세 화면으로 돌아가 그 이유를 알려 주며, 이동한 화면에서 한 번 사용할 안내 문구를 전달합니다.
+삭제 링크의 쿼리 매개변수로 회원 ID를 전달하고, 조회한 회원을 삭제한 뒤 목록으로 이동합니다.
 
 **실습 코드**
 
 [MemberController.java — delete()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-@PostMapping("/members/{id}/delete")
-public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+@GetMapping("/members/delete")
+public String delete(@RequestParam("id") Long id) {
     Member member = findMember(id);
-    // 게시글의 작성자 정보가 사라지지 않도록 삭제를 제한한다.
-    if (articleRepository.existsByMember(member)) {
-        // 다음 화면에서 한 번 표시할 메시지를 전달한다.
-        redirectAttributes.addFlashAttribute("message", "작성한 게시글이 있는 회원은 삭제할 수 없습니다.");
-        return "redirect:/members/" + id;
-    }
     memberRepository.delete(member);
     return "redirect:/members";
 }
@@ -1008,44 +993,36 @@ public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAtt
 
 **코드 설명**
 
-기존 샘플 회원은 모두 게시글 작성자이므로, existsByMember()가 true이면 삭제하지 않고 상세 화면으로 돌아갑니다. RedirectAttributes는 리다이렉트할 다음 화면에 값을 전달하는 객체이며, addFlashAttribute()로 넣은 안내는 이동한 화면에서 한 번 사용합니다.
+상세 화면의 삭제 링크는 /members/delete?id=회원ID로 연결됩니다. @RequestParam("id")로 ID를 받고 findMember()로 회원을 조회한 뒤, Repository의 delete()로 삭제합니다. 삭제가 끝나면 회원 목록을 다시 조회합니다.
 
-작성한 글이 없는 회원은 delete()로 삭제한 뒤 목록으로 이동합니다. 상세 화면의 삭제 폼은 POST 요청으로 전송합니다.
+이번 예제에서는 조회·삭제·리다이렉트의 흐름에 집중하여 GET 링크로 삭제합니다. 게시글 유무를 미리 검사하는 분기는 두지 않으며, 게시글이 참조하는 회원은 DB의 외래 키 제약으로 삭제할 수 없습니다. 이 경우 뒤에서 다루는 공통 오류 처리기가 409 오류 화면으로 안내합니다.
 
 **실행과 예상 결과**
 
-먼저 새로 등록한 정혁을 삭제합니다. 이어서 샘플 작성자를 선택해 삭제 요청을 비교합니다.
+앞에서 등록하고 이름을 정혁수로 수정한 회원의 상세 화면에서 삭제하기를 누릅니다. 목록으로 이동하면 해당 회원이 사라지고 기존 회원 4명만 남습니다. 샘플 작성자의 삭제를 시도하면 DB 제약에 따른 409 오류 화면이 표시되며 회원과 게시글은 유지됩니다. 존재하지 않는 회원 ID는 findMember()에서 예외가 발생하여 404 오류 화면으로 안내됩니다.
 
-정혁은 목록에서 사라집니다. 샘플 작성자는 상세로 돌아와 `작성한 게시글이 있는 회원은 삭제할 수 없습니다.`가 보입니다. 다른 회원 실습을 위해 관련 글을 무단으로 삭제할 필요는 없습니다.
-
-## 4.4 같은 등록 기능에 검증 추가하기
+## 4.4 회원가입과 입력 검증
 
 > **본 교재 참고**  
 > 5.4.4 「사용자 로그인 구현」의 회원가입 폼, 5.4.5 「게시판 웹 화면 구현」의 입력 검증
 
-3장에서는 요청 객체에 검증 규칙을 선언하고 @Valid로 검사했습니다. 이번에는 같은 검증 방식을 회원 등록 폼에 적용하고, 잘못 입력한 값을 화면에서 수정할 수 있도록 오류 메시지를 표시합니다.
-
-두 버전은 같은 MemberController 안에서 기본 add() 다음에 배치되어 있습니다. 기본 화면은 /members/new, 검증 화면은 /members/new-validation입니다. 검증 버전은 이름·이메일·나이를 입력받습니다.
+기본 CRUD에서는 엔티티를 직접 받아 저장했습니다. 회원가입에서는 이름·이메일·비밀번호의 입력 조건과 비밀번호 확인을 검사해야 하므로, 별도의 MemberForm으로 입력값과 검증 규칙을 모읍니다. 같은 MemberController에 /signup을 처리하는 메서드를 추가합니다.
 
 ### 4.4.1 MemberForm에 검증 규칙 선언
 
-폼 객체는 화면에서 입력받을 값과 검증 규칙을 모읍니다. DB 컬럼의 NOT NULL은 null을 막지만, 공백만 있는 이름이나 이메일 형식까지 판단하지는 않습니다. MemberForm에 화면의 입력 조건을 선언하면 DB 매핑과 입력 검증을 구분할 수 있습니다.
-
 **실습 코드**
 
-[MemberForm.java](../spring-mvc/src/main/java/com/example/demo/form/MemberForm.java)
+[MemberForm.java](../spring-mvc\src\main\java\com\example\demo\form\MemberForm.java)
 
 ```java
 package com.example.demo.form;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-// 회원 등록의 검증 버전에서 사용할 입력값과 검증 규칙을 모은다.
+// 회원가입의 입력값과 검증 규칙을 모으며, 확인용 비밀번호는 저장하지 않는다.
 @Data
 public class MemberForm {
     @NotBlank(message = "이름을 입력하세요.")
@@ -1057,87 +1034,87 @@ public class MemberForm {
     @Size(max = 256, message = "이메일은 256자 이하로 입력하세요.")
     private String email;
 
-    @NotNull(message = "나이를 입력하세요.")
-    @Min(value = 0, message = "나이는 0 이상으로 입력하세요.")
-    private Integer age;
+    @NotBlank(message = "비밀번호를 입력하세요.")
+    @Size(min = 8, message = "비밀번호는 8자 이상으로 입력하세요.")
+    private String password;
+
+    @NotBlank(message = "비밀번호 확인을 입력하세요.")
+    private String passwordConfirm;
+}
+```
+
+@NotBlank는 필수 입력과 공백만 있는 값을 검사하고, @Size는 문자열 길이를 검사합니다. 비밀번호는 최소 8자이며, 확인 값은 필수로 입력합니다. @Email은 이메일 형식을 검사하고, message는 검증 실패 시 표시할 문구입니다. MemberForm은 회원가입 전용이므로 ID나 검증 그룹이 필요하지 않으며, passwordConfirm은 DB에 저장하지 않습니다.
+
+### 4.4.2 회원가입 요청 처리
+
+**실습 코드**
+
+[MemberController.java — signupForm()·signup()](../spring-mvc\src\main/java/com/example/demo/controller/MemberController.java)
+
+```java
+@GetMapping("/signup")
+public String signupForm(@ModelAttribute("memberForm") MemberForm memberForm) {
+    return "signup";
+}
+
+@PostMapping("/signup")
+public String signup(@Valid @ModelAttribute("memberForm") MemberForm memberForm,
+                     BindingResult bindingResult) {
+    // @Valid가 폼의 규칙을 검사한다. BindingResult는 폼 바로 뒤에 둔다.
+    if (!bindingResult.hasFieldErrors("password")
+            && !bindingResult.hasFieldErrors("passwordConfirm")
+            && !Objects.equals(memberForm.getPassword(), memberForm.getPasswordConfirm())) {
+        bindingResult.rejectValue("passwordConfirm", "mismatch", "비밀번호가 일치하지 않습니다.");
+    }
+    // 형식 검증을 통과한 이메일에 대해서만 중복을 조회한다.
+    if (!bindingResult.hasFieldErrors("email")
+            && memberRepository.findByEmail(memberForm.getEmail()).isPresent()) {
+        bindingResult.rejectValue("email", "duplicate", "이미 사용 중인 이메일입니다.");
+    }
+    if (bindingResult.hasErrors()) {
+        return "signup";
+    }
+
+    // 확인 값은 저장하지 않는다. 해시 저장은 Spring Security 실습에서 적용한다.
+    Member member = Member.builder()
+            .name(memberForm.getName())
+            .email(memberForm.getEmail())
+            .password(memberForm.getPassword())
+            .build();
+    memberRepository.save(member);
+    return "redirect:/";
 }
 ```
 
 **코드 설명**
 
-MemberForm에는 3장에서 사용한 @NotBlank와 @Email에 더해 @Size로 이름과 이메일의 길이를 제한합니다. 나이의 @NotNull은 필수 입력을, @Min(0)은 0 이상 조건을 지정하며, message는 검증에 실패했을 때 표시할 문구입니다. 검증 애너테이션의 종류와 null 처리 규칙은 3.2.8절의 참고 표에서 확인합니다.
+GET /signup의 @ModelAttribute는 템플릿에서 사용할 빈 memberForm을 준비합니다. POST /signup의 @Valid는 폼에 선언한 규칙을 검사하고, 바로 뒤의 BindingResult는 바인딩·검증 오류를 받습니다. 오류가 있어도 컨트롤러가 이어서 실행되므로 추가 검증과 화면 반환을 직접 처리할 수 있습니다.
 
-**실행과 예상 결과**
+이 메서드에서 BindingResult를 생략하면 검증 실패 시 컨트롤러 본문이 실행되지 않고 MethodArgumentNotValidException이 발생하여 스프링의 예외 처리 과정으로 전달됩니다. BindingResult는 폼의 입력 오류를 다루며, 저장 중 발생하는 DB 예외까지 담는 객체는 아닙니다.
 
-폼과 엔티티의 필드를 비교합니다. 현재 두 객체 모두 이름·이메일·나이를 다루지만 역할과 애노테이션이 다릅니다.
+비밀번호와 확인 값의 기본 규칙을 통과한 경우 Objects.equals()로 두 값을 비교합니다. 이 메서드는 null이 포함되어도 비교할 수 있으며, 비밀번호를 trim()으로 바꾸지 않고 입력 그대로 확인합니다. 이메일 형식 검증을 통과한 경우에는 Repository로 중복을 조회합니다.
 
-검증 버전은 MemberForm으로 값을 받으며, 규칙에 맞는 데이터만 Member로 옮겨 저장합니다.
+rejectValue()의 첫 번째 인수는 오류를 표시할 필드 이름, 두 번째 인수는 오류 코드, 세 번째 인수는 표시할 문구입니다. hasErrors()가 true이면 signup을 반환하고, 오류가 없으면 폼에서 이름·이메일·비밀번호만 새 Member에 옮겨 저장합니다. redirect:/로 이동한 뒤 홈 컨트롤러가 회원 목록으로 안내합니다.
 
-### 4.4.2 검증 결과와 입력값 유지
-
-잘못된 입력이 있을 때 입력 내용을 모두 지우면 사용자는 처음부터 다시 작성해야 합니다. 입력값을 유지하면서 어느 항목을 고쳐야 하는지 알려 줄 수 있도록, 오류 메시지와 함께 등록 화면을 다시 보여 줍니다.
-
-@Valid는 폼 객체의 검증 규칙을 적용하도록 하며, 바로 뒤의 BindingResult는 검증 오류와 입력값을 자료형에 맞게 바꾸는 과정의 오류를 받습니다. 3장의 기본 400 오류 응답과 달리 여기서는 컨트롤러가 오류를 확인하여 화면을 선택하고, DB 조회가 필요한 이메일 중복도 직접 검사해 같은 오류 목록에 넣습니다.
-
-| 구분 | 3장의 REST API 예제 | 현재 MVC 폼 예제 |
-|---|---|---|
-| 입력을 받는 방법 | @RequestBody로 JSON을 객체로 변환합니다. | @ModelAttribute로 폼 값을 객체에 연결합니다. |
-| 검증 적용 | @Valid를 사용합니다. | @Valid를 사용합니다. |
-| 검증 실패 처리 | 기본 400 오류 응답을 반환합니다. | BindingResult를 확인하고 등록 화면을 다시 반환합니다. |
-| 오류 확인 위치 | 응답 JSON의 errors 항목입니다. | 등록 화면의 각 입력칸 옆입니다. |
+### 4.4.3 회원가입 화면과 오류 확인
 
 **실습 코드**
 
-[MemberController.java — addValidationForm()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
-
-```java
-// 기본 등록에 입력 검증을 추가한 버전이다.
-@GetMapping("/members/new-validation")
-public String addValidationForm(@ModelAttribute("memberForm") MemberForm form) {
-    return "member-add-validation";
-}
-```
-
-[MemberController.java — addValidation()](../spring-mvc/src/main/java/com/example/demo/controller/MemberController.java)
-
-```java
-@PostMapping("/members/validation")
-public String addValidation(@Valid @ModelAttribute("memberForm") MemberForm form,
-                            BindingResult bindingResult) {
-    // @Valid가 폼의 검증 규칙을 확인한다. BindingResult는 바로 뒤에 두어 오류를 받는다.
-    if (memberRepository.findByEmail(form.getEmail()).isPresent()) {
-        // 이메일 중복처럼 DB 조회가 필요한 검증은 직접 추가한다.
-        bindingResult.rejectValue("email", "duplicate", "이미 사용 중인 이메일입니다.");
-    }
-    if (bindingResult.hasErrors()) {
-        // 같은 화면을 반환하면 입력값과 오류 메시지가 유지된다.
-        return "member-add-validation";
-    }
-
-    // 검증을 통과한 폼의 값으로 Member 엔티티를 만들어 저장한다.
-    Member member = Member.builder()
-            .name(form.getName()).email(form.getEmail()).age(form.getAge()).build();
-    memberRepository.save(member);
-    return "redirect:/members";
-}
-```
-
-[member-add-validation.html](../spring-mvc/src/main/resources/templates/member-add-validation.html)
+[signup.html](../spring-mvc\src\main\resources\templates\signup.html)
 
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>회원 등록(검증)</title>
+    <title>회원가입</title>
 </head>
 <body>
 <div th:replace="~{common :: header}"></div>
-<h2>회원 등록(검증)</h2>
-<p>정혁 / JungHyuk@campus.com / 10살로 등록해 보세요.</p>
-<!-- novalidate로 브라우저의 검증을 끄고 서버의 한글 오류 메시지를 확인한다. -->
-<form th:action="@{/members/validation}" th:object="${memberForm}" method="post" novalidate>
-    <!-- th:field는 폼의 입력값을 연결하고 th:errors는 해당 항목의 오류를 표시한다. -->
+<h2>회원가입</h2>
+<p>정혁 / JungHyuk@campus.com / password123으로 가입해 보세요.</p>
+<!-- novalidate로 브라우저 검증을 끄고 서버의 오류 메시지를 확인한다. -->
+<form th:action="@{/signup}" th:object="${memberForm}" method="post" novalidate>
     <p>
         <label for="name">이름</label>
         <input type="text" th:field="*{name}">
@@ -1149,11 +1126,16 @@ public String addValidation(@Valid @ModelAttribute("memberForm") MemberForm form
         <span th:errors="*{email}"></span>
     </p>
     <p>
-        <label for="age">나이</label>
-        <input type="number" th:field="*{age}">
-        <span th:errors="*{age}"></span>
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password" autocomplete="new-password">
+        <span th:errors="*{password}"></span>
     </p>
-    <button type="submit">등록하기</button>
+    <p>
+        <label for="passwordConfirm">비밀번호 확인</label>
+        <input type="password" id="passwordConfirm" name="passwordConfirm" autocomplete="new-password">
+        <span th:errors="*{passwordConfirm}"></span>
+    </p>
+    <button type="submit">가입하기</button>
 </form>
 <p><a th:href="@{/members}">목록으로</a></p>
 <div th:replace="~{common :: footer}"></div>
@@ -1161,39 +1143,26 @@ public String addValidation(@Valid @ModelAttribute("memberForm") MemberForm form
 </html>
 ```
 
-**코드 설명**
+th:object는 memberForm을 선택하고, 이름·이메일의 th:field는 입력값을 폼 속성과 연결합니다. th:errors는 필드별 오류를 표시합니다. novalidate는 브라우저의 내장 검증을 끄고 서버가 만든 메시지를 확인하기 위한 속성입니다.
 
-BindingResult는 검증 대상 매개변수 바로 뒤에 두며, rejectValue()로 필드별 오류를 추가할 수 있습니다. 첫 값 email은 오류가 생긴 필드, duplicate는 오류를 구별하는 코드, 마지막 문자열은 표시할 문구입니다.
-
-hasErrors()가 true이면 같은 등록 템플릿을 반환하여 입력 객체와 오류 정보를 유지하고, th:errors로 각 항목의 메시지를 표시합니다. 폼의 novalidate는 브라우저의 내장 형식 검증을 끄고 서버가 만든 메시지를 관찰하기 위한 HTML 속성입니다.
-
-**타입 변환 오류와 검증 오류**
-
-`BindingResult`는 `@Valid`의 검증 결과뿐 아니라 폼 값을 객체에 바인딩할 때 발생한 오류도 담습니다. 서버는 문자열로 받은 나이를 먼저 `Integer`로 변환하고, 변환된 값이 `@Min(0)` 등의 조건을 만족하는지 검사합니다.
-
-| 서버에 전달된 값 | 처리 단계 | 결과 |
-|---|---|---|
-| `age=10` | 정수 변환 후 검증 | 정수 10으로 변환되고 나이 조건을 통과합니다. |
-| `age=-1` | 정수 변환 후 검증 | 정수 변환은 성공하지만 `@Min(0)` 검증에 실패합니다. |
-| `age=abc` | 타입 변환 | 정수로 변환하지 못해 `typeMismatch` 바인딩 오류가 기록됩니다. |
-
-age=abc처럼 정수로 바꿀 수 없는 값이 서버에 전달되면, 검증 규칙을 검사하기 전에 자료형 변환부터 실패합니다. 이때의 메시지는 애너테이션의 message와 다를 수 있지만, hasErrors()로 오류를 확인하여 저장하지 않고 입력 화면에서 안내할 수 있습니다.
+오류가 있으면 같은 화면을 반환하여 이름·이메일과 오류 정보를 유지합니다. 비밀번호 입력란은 일반 name 속성으로 전송하고 value를 채우지 않으므로 화면을 다시 표시할 때 비어 있으며, 두 값을 다시 입력해야 합니다.
 
 **실행과 예상 결과**
 
-기본 CRUD의 삭제 실습을 마쳐 기존 회원 4명만 남은 상태에서 검증 화면을 엽니다. 빈 이름·잘못된 이메일·음수 나이를 제출하고, 기존 샘플 이메일 중복도 확인합니다. 마지막으로 정혁 / JungHyuk@campus.com / 10을 입력해 정상 등록합니다.
-
-잘못된 입력을 제출하면 다음 메시지가 각 입력칸 옆에 표시됩니다. novalidate가 브라우저의 형식 검증을 끄므로 서버가 만든 메시지를 확인할 수 있습니다.
+기본 CRUD의 삭제 실습을 마쳐 회원 4명만 남은 상태에서 /signup을 엽니다. 다음 값을 제출하고 오류가 있을 때 회원이 추가되지 않는지 확인합니다.
 
 | 항목 | 제출할 값 | 예상 오류 메시지 |
 |---|---|---|
 | 이름 | 빈 문자열 | 이름을 입력하세요. |
 | 이메일 | wrong | 이메일 형식으로 입력하세요. |
-| 나이 | -1 | 나이는 0 이상으로 입력하세요. |
+| 이메일 | SeojunYoon@campus.com | 이미 사용 중인 이메일입니다. |
+| 비밀번호 | 1234567 | 비밀번호는 8자 이상으로 입력하세요. |
+| 비밀번호 확인 | 빈 문자열 | 비밀번호 확인을 입력하세요. |
+| 비밀번호 확인 | 비밀번호와 다른 8자 이상 값 | 비밀번호가 일치하지 않습니다. |
 
-이때 DB에 회원은 추가되지 않으며, 입력한 이메일과 나이는 화면에 남아 수정할 수 있습니다. 같은 템플릿을 바로 반환하므로 오류를 담은 BindingResult와 입력 객체를 다시 사용할 수 있습니다. 오류가 있을 때 리다이렉트하지 않는 이유도 여기에 있습니다.
+빈 비밀번호에는 필수 입력과 최소 길이 오류가 함께 표시될 수 있습니다. 마지막으로 정혁 / JungHyuk@campus.com을 입력하고 비밀번호와 확인 값에 모두 password123을 입력하여 가입합니다. 회원 목록으로 이동하고 기존 회원을 포함해 5명이 표시됩니다.
 
-정상 정보로 제출하면 저장 후 목록으로 리다이렉트되고, 정혁을 포함한 회원 5명이 표시됩니다. 이후 게시글 조회는 회원 수를 바꾸지 않습니다. MVC 앱을 재시작하면 다시 회원 4명과 게시글 100개의 초기 상태가 됩니다.
+기본 등록의 중복 이메일은 DB의 UNIQUE 제약으로 공통 오류 화면에 안내됩니다. 회원가입에서는 저장 전에 중복을 확인하여 입력란 옆에 오류를 표시하는 차이를 비교합니다. 로그인 기능과 비밀번호 해시는 이후 Spring Security 프로젝트에서 다룹니다.
 
 ## 4.5 게시글 조회와 페이징
 
@@ -1418,7 +1387,7 @@ public String detail(@PathVariable("id") Long id, Model model) {
     <div>
         <a th:href="@{/members}">회원 목록</a>
         <a th:href="@{/members/new}">회원 등록</a>
-        <a th:href="@{/members/new-validation}">회원 등록(검증)</a>
+        <a th:href="@{/signup}">회원가입</a>
         <a th:href="@{/articles}">게시글 목록</a>
     </div>
     <hr>
@@ -1568,11 +1537,11 @@ public class GlobalExceptionHandler {
 
 브라우저는 탭 아이콘을 표시하기 위해 /favicon.ico를 요청할 수 있습니다. 프로젝트에는 스프링 부트를 잎과 전원 기호로 표현한 아이콘을 src/main/resources/static/favicon.ico에 두었으며, 이 위치의 정적 파일은 /favicon.ico로 제공됩니다.
 
-그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, log.error("문구", ex)로 안내 문구와 예외의 상세 내용을 로그에 기록합니다. 사용자 화면에는 정해진 메시지만 표시하며, 회원 등록의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
+그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, log.error("문구", ex)로 안내 문구와 예외의 상세 내용을 로그에 기록합니다. 사용자 화면에는 정해진 메시지만 표시하며, 회원가입의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
 
 **실행과 예상 결과**
 
-`/members/abc`, `/articles/abc`에 접속해 숫자 변환 오류를 확인하고, 없는 숫자 ID의 회원·게시글도 조회합니다. 기본 회원 등록에서 기존 이메일로 등록해 DB 예외도 확인합니다. 브라우저 Network에서 상태 코드를 확인합니다.
+`/members/abc`, `/articles/abc`에 접속해 숫자 변환 오류를 확인하고, 없는 숫자 ID의 회원·게시글도 조회합니다. 기본 등록에서 기존 이메일로 등록하면 409 공통 오류 화면이 표시되고, /signup에서는 입력란 옆에 중복 오류가 표시되는지 비교합니다. 브라우저 Network에서 상태 코드를 확인합니다.
 
 `/missing.png`처럼 존재하지 않는 정적 파일을 요청하면 404 오류 화면이 표시되고 서버 로그에 오류 스택이 남지 않는지 확인합니다. `/favicon.ico` 요청은 200으로 응답하며 아이콘을 반환합니다.
 
@@ -1583,16 +1552,17 @@ public class GlobalExceptionHandler {
 | /members/abc처럼 숫자 ID에 문자 전달 | 400 | 숫자로 입력할 값을 확인하도록 안내하는 오류 화면 |
 | 존재하지 않는 숫자 ID 조회 | 404 | 회원 또는 게시글을 찾을 수 없다는 오류 화면 |
 | 존재하지 않는 정적 파일 요청 | 404 | 요청한 파일을 찾을 수 없다는 오류 화면 |
-| 기본 등록에서 중복 이메일 저장 | 409 | DB 제약 위반을 안내하는 오류 화면 |
-| 검증 등록에서 잘못된 입력 또는 이메일 중복 | 200 | 입력값과 필드별 오류를 유지한 등록 화면 |
+| DB 제약 위반 발생 | 409 | DB 제약 위반을 안내하는 오류 화면 |
+| 회원가입에서 잘못된 입력 또는 이메일 중복 | 200 | 이름·이메일과 필드별 오류를 유지한 가입 화면 |
 | 예상하지 못한 서버 오류 | 500 | 공통 오류 화면 |
 
-검증 버전은 BindingResult로 오류를 확인하고 입력 화면을 다시 보여 주므로, 잘못된 입력이라도 화면을 정상 반환한 응답 상태는 200입니다. 예상하지 못한 서버 오류는 공통 처리기에서 500 응답과 안내 화면으로 처리합니다.
+회원가입은 BindingResult로 오류를 확인하고 가입 화면을 다시 보여 주므로, 잘못된 입력이라도 화면을 정상 반환한 응답 상태는 200입니다. 비밀번호 입력란은 비워서 표시합니다. 예상하지 못한 서버 오류는 공통 처리기에서 500 응답과 안내 화면으로 처리합니다.
 
 ## 4.7 학습 확인
 
 - @Controller의 문자열 반환과 @RestController의 객체 반환을 비교합니다.
 - 화면 이름 반환과 redirect 반환이 브라우저에서 어떻게 다른지 설명합니다.
-- 기본 등록과 검증 등록에서 같은 이메일 중복이 어디서 처리되는지 설명합니다.
+- 엔티티를 직접 사용하는 기본 CRUD와 MemberForm을 검증하는 회원가입의 차이를 설명합니다.
+- @RequestParam으로 수정 ID를 받는 방법과 hidden 필드로 저장 요청에 포함하는 방법을 설명합니다.
 - page=0이 화면의 1페이지인 이유를 말해 봅니다.
 - 화면에 404 숫자를 출력하는 것과 HTTP 404 상태를 설정하는 차이를 설명합니다.

@@ -1078,7 +1078,7 @@ Page에는 목록뿐 아니라 전체 개수·현재 페이지 정보도 있습�
 // PageableDefault는 요청에서 생략한 조건의 기본값이다. 페이지 번호는 0부터 시작한다.
 @GetMapping
 public Page<ArticleResponse> findAll(
-        @PageableDefault(size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        @PageableDefault(page = 0, size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
     return articleService.findAll(pageable);
 }
 ```
@@ -1107,9 +1107,9 @@ Accept: application/json
 
 **코드 설명**
 
-@PageableDefault는 요청에서 생략한 페이지 크기와 정렬의 기본값입니다. `page.map(this::toResponse)`는 페이지 안의 각 Article에 toResponse를 적용합니다.
+@PageableDefault는 요청에서 생략한 페이지 번호·페이지 크기·정렬 조건의 기본값을 지정합니다. 페이지 번호는 0부터 시작하며, `page = 0`은 첫 페이지를, `size = 5`는 한 페이지에 표시할 게시글 수를 뜻합니다. 정렬 조건을 생략하면 ID 내림차순으로 조회합니다.
 
-this::toResponse는 같은 클래스의 메서드를 전달하는 메서드 참조 문법입니다. 여기서는 각 게시글을 toResponse()에 전달해 응답 DTO로 바꾸는 동작을 뜻하며, 새로운 조회 없이 이미 조회한 페이지의 내용을 변환합니다.
+`page.map(this::toResponse)`는 페이지 안의 각 Article에 toResponse를 적용합니다. this::toResponse는 같은 클래스의 메서드를 전달하는 메서드 참조 문법으로, 여기서는 각 게시글을 toResponse()에 전달해 응답 DTO로 바꾸는 동작을 뜻합니다. 새로운 조회 없이 이미 조회한 페이지의 내용을 변환합니다.
 
 **실행과 예상 결과**
 
