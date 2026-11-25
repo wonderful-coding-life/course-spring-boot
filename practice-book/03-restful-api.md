@@ -1423,7 +1423,9 @@ Callable 안에서 주입받은 서비스를 호출하면 해당 작업 스레�
 
 ### 3.5.1 테스트용 H2 데이터베이스 준비
 
-앱을 실행할 때는 MariaDB를 사용하지만 Spring 테스트에서는 메모리 H2를 사용합니다. 테스트에서 src/test/resources/application.properties를 읽도록 별도의 설정 파일을 두므로, 실습용 MariaDB 서버나 DB 환경변수 없이 실행할 수 있습니다. 실행용 src/main/resources/application.properties와 파일 위치를 구분합니다.
+테스트를 반복 실행하려면 기존 실습 데이터를 바꾸지 않고 매번 같은 조건을 준비할 수 있어야 합니다. 이를 위해 앱을 실행할 때 사용하는 MariaDB와 별도로, 테스트에서는 메모리 H2에 필요한 데이터를 준비합니다.
+
+테스트용 설정은 src/test/resources/application.properties에 두므로, 실습용 MariaDB 서버나 DB 환경변수 없이 실행할 수 있습니다. 실행용 src/main/resources/application.properties와 파일 위치를 구분합니다.
 
 [build.gradle — 테스트 의존성 추가](../spring-rest/build.gradle)
 
@@ -1456,7 +1458,9 @@ create-drop은 Spring 테스트 컨텍스트가 시작될 때 엔티티를 기�
 > **본 교재 참고**
 > 4.3.1 「테스트 클래스 작성」
 
-앞선 JPA 실습에서는 로그를 읽어 결과를 확인했습니다. 이번에는 실제 Repository로 회원을 조회하고, assertThat() 뒤에 조건을 연결하여 예상한 결과인지 자동으로 검증합니다. CRUD 전체를 다시 구현하는 대신 테스트의 준비·실행·정리와 기본 검증 문법에 집중합니다.
+앞선 JPA 실습에서는 로그를 읽어 결과를 확인했지만, 같은 기능을 반복해서 점검할 때마다 사람이 결과를 비교하면 잘못된 값을 놓칠 수 있습니다. 이번에는 실제 Repository로 회원을 조회하고, 예상한 결과와 다르면 테스트가 실패하도록 작성합니다.
+
+JUnit은 @Test가 붙은 메서드를 실행하고 성공·실패를 보고하는 테스트 도구이며, AssertJ는 실제값과 예상값을 비교하는 메서드를 제공하는 라이브러리입니다. AssertJ의 assertThat() 뒤에 확인할 조건을 연결하면서 테스트의 준비·실행·정리와 검증 문법을 익힙니다.
 
 **실습 코드**
 
@@ -1554,6 +1558,8 @@ class MemberRepositoryTests {
 
 이 클래스에는 @Transactional을 붙이지 않습니다. 자동 롤백 대신 @AfterEach에서 회원을 직접 삭제하여 준비와 정리 메서드의 역할을 확인합니다. 테이블 생성과 제거는 컨텍스트 단위이며, 회원 데이터의 준비와 삭제는 테스트 메서드 단위라는 차이를 구분합니다.
 
+코드의 import static은 클래스 이름을 앞에 쓰지 않고 해당 메서드를 호출할 수 있도록 가져오는 선언입니다. 여기서는 Assertions.assertThat() 대신 assertThat()으로 검증을 작성합니다.
+
 assertThat(실제값) 뒤에는 값의 자료형에 맞는 검증 메서드를 연결합니다. 이 예제는 문법을 익히기 위해 목록의 존재·크기, 회원 정보, 숫자 범위와 boolean 결과를 함께 확인합니다. 조건이 다르면 예외가 발생하여 테스트가 실패하므로 결과를 판단하기 위한 로그는 출력하지 않습니다.
 
 | 검증 문법 | 예제에서 확인하는 내용 |
@@ -1578,7 +1584,7 @@ MemberRepositoryTests를 실행하면 활성 테스트 2개는 성공하고 @Dis
 > **본 교재 참고**  
 > 4.3.1 「테스트 클래스 작성」, 4.3.3 「단위 테스트」
 
-가짜 Repository가 돌려줄 값을 미리 정하면 DB가 없어도 실제 Service의 변환 코드를 실행할 수 있습니다. Mockito는 이런 가짜 객체를 만들어 주는 라이브러리입니다.
+게시글을 응답 DTO로 바꾸는 동작만 확인하고 싶은데 실제 DB까지 연결하면, 조회 문제와 변환 문제를 함께 살펴봐야 합니다. Repository가 돌려줄 값을 미리 정해 두면 DB 없이 서비스의 변환 코드에 집중할 수 있으며, Mockito는 이런 가짜 객체를 만들어 주는 라이브러리입니다.
 
 **실습 코드**
 
@@ -1645,7 +1651,7 @@ class ArticleServiceTests {
 
 | 문법 | 역할 |
 |---|---|
-| @ExtendWith(MockitoExtension.class) | JUnit 실행에 Mockito 기능 연결 |
+| @ExtendWith(MockitoExtension.class) | JUnit이 테스트를 실행할 때 Mockito의 객체 준비 기능도 사용하도록 연결합니다. |
 | @Mock | 가짜 Repository 생성 |
 | @InjectMocks | 실제 Service를 만들고 가짜 의존성 주입 |
 | when(...).thenReturn(...) | 특정 호출의 반환값 지정 |
@@ -1657,19 +1663,9 @@ ArticleService의 생성자는 ArticleRepository와 MemberRepository를 모두 �
 
 여기의 ID 1은 외부 DB의 ID가 아니라 직접 만든 테스트 객체의 값입니다. `@InjectMocks`가 만드는 Service는 실제 객체이므로 findById()의 DTO 변환 코드가 실행됩니다. 다음 절의 `@SpringBootTest` 통합 테스트는 스프링 컨테이너를 준비하고 `@Autowired`로 객체를 주입받는다는 점에서 다릅니다.
 
-`when(호출).thenReturn(반환값)`은 가짜 객체의 응답을 정합니다. 예제에서는 findById(1L)에 Optional로 감싼 article을 돌려주도록 설정했습니다.
+`when(호출).thenReturn(반환값)`은 가짜 객체의 응답을 정합니다. Optional.of(article)은 준비한 게시글을 Optional에 담는 코드이며, Repository의 findById() 반환형에 맞추어 이 값을 돌려주도록 설정합니다. when()도 import static으로 가져왔으므로 클래스 이름 없이 호출합니다.
 
-**참고: 자주 쓰는 검증 문법**
-
-`assertThat(실제값)` 뒤에 확인할 조건을 연결합니다. 조건을 만족하지 않으면 테스트가 실패합니다. 먼저 예제의 isEqualTo를 실행하고, 나머지 문법은 필요할 때 참고합니다.
-
-| 문법 | 확인할 내용 |
-|---|---|
-| isEqualTo(예상값) | 예상값과 같은가? |
-| isNotNull() | null이 아닌가? |
-| isTrue() / isFalse() | 참인가 / 거짓인가? |
-| hasSize(개수) | 목록 등의 크기가 예상한 개수인가? |
-| isEmpty() | 목록이나 문자열 등이 비어 있는가? |
+검증에는 앞 절과 같은 assertThat()을 사용합니다. 여기서는 서비스가 반환한 DTO의 제목과 작성자 이름을 isEqualTo()로 비교하여 변환 결과를 확인합니다.
 
 **실행과 예상 결과**
 
@@ -1682,7 +1678,9 @@ ArticleServiceTests를 개별 실행합니다. 이 테스트는 DB 환경변수�
 > **본 교재 참고**  
 > 4.3.2 「통합 테스트」
 
-MockMvc는 외부 서버 포트를 열고 브라우저를 호출하는 대신 MVC 요청 처리 과정을 테스트 안에서 실행합니다. 현재 예제는 Controller·Service·Repository와 테스트용 H2를 실제로 연결합니다. H2를 사용해도 여러 계층을 연결하여 검증하므로 통합 테스트입니다.
+서비스의 변환 코드가 맞더라도 요청 URL이 잘못 연결되거나 응답 JSON이 예상과 다를 수 있습니다. 이번에는 요청을 받은 컨트롤러부터 서비스·Repository·테스트용 H2까지 연결하여, 응답 상태와 본문을 함께 확인합니다.
+
+MockMvc는 실제 서버 포트를 열거나 브라우저를 실행하지 않고, MVC의 요청 처리 과정을 테스트 안에서 실행하는 도구입니다. 여러 계층을 연결하여 검증하므로 H2를 사용해도 통합 테스트에 해당합니다.
 
 **실습 코드**
 
@@ -1756,7 +1754,9 @@ class ArticleControllerIntegrationTests {
 
 **코드 설명**
 
-setUp()에서 회원과 게시글을 H2에 저장하고, tearDown()에서 게시글과 회원 순서로 삭제합니다. perform()이 요청을 실행하고, andExpect()가 기대한 결과를 확인합니다. jsonPath로 응답 JSON의 값을 선택한 뒤 value로 예상값과 비교합니다. 현재 테스트는 단건 DTO의 title·writerName을 검사합니다.
+@AutoConfigureMockMvc는 테스트에서 사용할 MockMvc를 준비하도록 하며, @Autowired로 이를 주입받습니다. setUp()에서 회원과 게시글을 H2에 저장하고, tearDown()에서는 게시글과 회원 순서로 삭제하여 테스트 데이터를 정리합니다.
+
+perform()에 get()으로 만든 요청을 전달하면 조회 요청을 처리하고, andExpect()는 그 응답이 기대한 조건에 맞는지 확인합니다. JSONPath는 JSON에서 값을 선택하는 경로 표현식으로, jsonPath()로 선택한 title·writerName을 value()의 예상값과 비교합니다.
 
 조회에는 setUp()에서 저장한 게시글의 실제 ID를 사용합니다. MariaDB의 공통 SQL이나 특정 ID에 의존하지 않으며, 게시글이 회원을 참조하므로 정리할 때는 게시글을 먼저 삭제합니다.
 
@@ -1781,7 +1781,7 @@ ArticleControllerIntegrationTests를 IDE에서 개별 실행하거나 Gradle의 
 
 ### 3.5.5 기본 테스트 실행
 
-모듈 폴더에서 `./gradlew.bat test`를 실행하면 JUnit 테스트를 실행합니다. `@Tag`에 따른 제외 설정이 없으므로 H2를 사용하는 Spring 테스트와 Mockito 단위 테스트가 모두 포함됩니다. `@Disabled`가 붙은 추가 실습만 건너뜁니다.
+코드를 수정한 뒤에는 개별 기능뿐 아니라 다른 기능에도 문제가 생기지 않았는지 함께 확인해야 합니다. 모듈 폴더에서 `./gradlew.bat test`를 실행하면 H2를 사용하는 Spring 테스트와 Mockito 단위 테스트를 한 번에 실행하며, @Disabled가 붙은 추가 실습만 건너뜁니다.
 
 [build.gradle — test 태스크 발췌](../spring-rest/build.gradle)
 
@@ -1793,7 +1793,9 @@ tasks.named('test') {
 
 DemoApplicationTests의 testContextLoads()는 테스트용 H2 설정으로 스프링 컨테이너가 시작되는지 확인합니다. 메서드 본문이 비어 있어도 컨텍스트 초기화에 실패하면 테스트가 실패합니다. 기본 설정의 @SpringBootTest는 실제 HTTP 서버 포트를 열지 않으며, HTTP 요청 검증은 앞 절처럼 MockMvc를 사용합니다.
 
-실행 결과는 5개 성공과 추가 실습 1개 건너뜀입니다. @Disabled를 제거하면 추가 실습도 포함됩니다. 각 테스트는 다른 테스트의 실행 순서에 의존하지 않습니다. Gradle·의존성 다운로드 실패는 검증 실패와 구분하여 실행 환경을 확인합니다.
+실행 결과는 5개 성공과 추가 실습 1개 건너뜀이며, @Disabled를 제거하면 추가 실습도 실행됩니다. 각 테스트는 다른 테스트의 실행 순서에 의존하지 않도록 필요한 데이터를 직접 준비합니다.
+
+Gradle이나 의존성 다운로드에 실패했다면 테스트의 검증 결과와 구분해야 합니다. 이 경우에는 실행 환경을 먼저 확인합니다.
 
 ## 3.6 학습 확인
 

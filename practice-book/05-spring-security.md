@@ -3,22 +3,26 @@
 > **본 교재 참고**  
 > 5장 「스프링 부트로 게시판 만들기」의 5.3 「스프링 시큐리티」
 
-인증은 요청한 사용자가 누구인지 확인하는 과정입니다. 이 예제에서는 이메일과 비밀번호로 로그인해 사용자를 확인합니다. 인가는 확인된 사용자에게 어떤 작업을 허용할지 결정하는 과정입니다. 일반 회원도 로그인할 수 있지만 상품을 등록하거나 삭제하려면 관리자 권한이 있어야 합니다.
+상품 목록을 보는 기능과 상품을 등록·삭제하는 기능을 누구나 사용할 수 있게 두면, 권한이 없는 사용자도 데이터를 바꿀 수 있습니다. 사용자가 누구인지 확인하는 인증과, 그 사용자에게 허용할 작업을 정하는 인가를 함께 적용하여 접근 범위를 구분합니다.
+
+이 예제에서는 이메일과 비밀번호로 로그인해 사용자를 확인합니다. 일반 회원도 로그인하여 상품 목록을 볼 수 있지만 상품을 등록하거나 삭제하려면 관리자 권한이 있어야 합니다.
 
 Spring Security는 요청이 컨트롤러에 도달하기 전에 로그인 상태와 접근 규칙을 확인합니다. 따라서 상품 컨트롤러마다 로그인 여부를 직접 검사하는 코드를 작성할 필요가 없습니다. 이 장에서는 계정 조회와 비밀번호 확인, 요청별 권한 설정이 화면의 동작으로 어떻게 이어지는지 살펴봅니다.
 
 **필터 체인과 인증·인가**
 
-필터(Filter)는 컨트롤러 앞에서 웹 요청을 확인하거나 처리하는 구성 요소입니다. 여러 필터를 정해진 순서대로 연결한 것이 필터 체인입니다. 각 필터는 다음 처리를 이어 가거나, 로그인 성공 시 이동 응답을 보내는 것처럼 그 자리에서 요청 처리를 마칠 수 있습니다. SecurityFilterChain은 보안에 필요한 필터들을 묶은 체인입니다.
+로그인 여부와 접근 권한을 컨트롤러마다 검사하면 같은 코드가 반복되므로, Spring Security는 컨트롤러에 요청이 도달하기 전에 필터로 공통 검사를 수행합니다. 필터(Filter)는 웹 요청을 확인하거나 처리하는 구성 요소이며, 여러 필터를 정해진 순서로 연결한 것이 필터 체인입니다.
+
+각 필터는 다음 처리를 이어 가거나, 로그인 성공 시 이동 응답을 보내는 것처럼 그 자리에서 처리를 마칠 수 있습니다. SecurityFilterChain은 이처럼 보안에 필요한 필터들을 묶은 구성을 나타냅니다.
 
 이 예제에서는 인증 필터(Authentication Filter)와 인가 필터(Authorization Filter)의 역할을 구분하면 충분합니다.
 
 | 구분 | 이 예제에서 하는 일 | 관련 설정 |
 |---|---|---|
-| 인증 필터 | POST /login의 이메일·비밀번호를 받아 인증 절차에 전달합니다. 실제 필터 클래스는 `UsernamePasswordAuthenticationFilter`입니다. | `formLogin()`, `usernameParameter("email")` |
-| 인가 필터 | 요청한 주소에 접근할 수 있는지 로그인 상태와 권한을 확인합니다. 실제 필터 클래스는 `AuthorizationFilter`입니다. | `authorizeHttpRequests()`, `authenticated()`, `hasRole("ADMIN")` |
+| 인증 필터 | POST /login의 이메일·비밀번호를 받아 인증 절차에 전달합니다. | `formLogin()`, `usernameParameter("email")` |
+| 인가 필터 | 요청한 주소에 접근할 수 있는지 로그인 상태와 권한을 확인합니다. | `authorizeHttpRequests()`, `authenticated()`, `hasRole("ADMIN")` |
 
-여기서 Authentication Filter는 인증을 담당하는 필터를 가리키는 표현입니다. 현재 폼 로그인을 처리하는 클래스 이름은 UsernamePasswordAuthenticationFilter입니다. 필터를 직접 구현하지 않고 SecurityConfig에서 기능과 규칙을 설정합니다.
+그림의 UsernamePasswordAuthenticationFilter는 로그인 폼의 값을 인증 절차에 전달하는 클래스이고, AuthorizationFilter는 접근 권한을 검사하는 클래스입니다. 필터를 직접 작성하기보다 SecurityConfig에서 로그인 기능과 요청별 접근 규칙을 설정하여 사용합니다.
 
 아래 그림은 핵심 역할만 추린 흐름입니다. 로그인 요청과 로그인 후의 상품 요청은 서로 다른 HTTP 요청입니다. 실제 체인에는 로그인 정보를 읽는 처리와 CSRF 검사, 로그아웃 등 다른 보안 필터도 포함됩니다.
 
@@ -35,7 +39,9 @@ flowchart TD
     H -->|거절| J["비로그인: 로그인 화면으로 이동<br/>로그인했지만 권한 부족: 403"]
 ```
 
-인증 과정에서는 UserDetailsService로 회원을 조회하고 PasswordEncoder로 비밀번호를 확인합니다. 성공하면 이 예제는 세션에 로그인 정보를 보관합니다. 이후 상품 요청에서는 이메일·비밀번호를 다시 보내지 않고 세션 쿠키로 로그인 상태를 이어 갑니다. 인가 필터는 이 로그인 정보와 요청별 규칙을 사용해 접근을 판단합니다. 세부 흐름은 폼 로그인(https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/form.html)과 요청 인가(https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html) 공식 문서에서도 확인할 수 있습니다.
+로그인할 때는 회원을 조회하고 비밀번호를 확인한 뒤, 서버가 사용자별로 정보를 보관하는 세션에 로그인 정보를 저장합니다. 이후 요청에는 브라우저가 세션을 구별하는 쿠키를 함께 보내므로, 이메일과 비밀번호를 다시 입력하지 않고 로그인 상태를 이어 갈 수 있습니다.
+
+회원 조회는 UserDetailsService, 비밀번호 확인은 PasswordEncoder를 통해 연결하며 각 역할은 5.2절에서 살펴봅니다. 인가 필터는 로그인 정보와 요청별 규칙으로 접근을 판단하고, 세부 흐름은 폼 로그인(https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/form.html)과 요청 인가(https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html) 공식 문서에서도 확인할 수 있습니다.
 
 **학습 목표**
 
@@ -51,7 +57,9 @@ flowchart TD
 > **본 교재 참고**  
 > 5.3.1 「스프링 시큐리티 설정」, 5.4.2 「스키마 구축」
 
-회원 정보에는 이름·이메일·나이에 비밀번호 해시와 권한을 추가합니다. 로그인 ID는 이메일입니다. 상품은 이름과 가격만 가진 간단한 엔티티로 준비해 화면 CRUD보다 보안 규칙에 집중합니다.
+로그인에 사용할 회원 정보에는 비밀번호와 권한이 필요하므로, 기존 이름·이메일·나이에 관련 필드를 추가합니다. 비밀번호는 원문을 그대로 보관하지 않도록 변환한 해시를 저장하고, 로그인 ID로는 이메일을 사용합니다.
+
+상품은 이름과 가격만 가진 간단한 엔티티로 준비합니다. 익숙한 상품 CRUD 흐름에 접근 규칙을 적용하면서 보안 기능이 요청 처리에 어떻게 연결되는지 확인합니다.
 
 ### 5.1.1 의존성과 H2 초기화
 
@@ -159,7 +167,7 @@ DemoApplication을 실행하고 http://localhost:8080 에 접속합니다. SQL �
 
 ### 5.1.2 로그인용 회원과 상품 구조
 
-보안 사용자 정보와 상품은 각각 별도의 테이블에 저장합니다. 회원 엔티티 자체를 로그인 화면의 응답으로 내보내는 구조는 아닙니다.
+로그인할 회원을 확인하려면 이메일과 비밀번호 해시가 필요하고, 관리자 기능을 구분하려면 권한 정보도 필요합니다. 회원 엔티티에 이 값을 보관하고, 상품은 별도 엔티티로 관리하여 로그인 정보와 상품 데이터를 구분합니다.
 
 **실습 코드**
 
@@ -246,7 +254,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
 **코드 설명**
 
-회원은 한 개의 authority 문자열을 갖습니다. ROLE_USER 또는 ROLE_ADMIN입니다. 이 실습에서는 별도 권한 엔티티나 여러 권한 연결 테이블을 만들지 않습니다. MemberRepository.findByEmail()은 로그인 계정을 찾습니다. ProductRepository는 기본 CRUD만 필요합니다.
+회원의 authority에는 일반 회원을 나타내는 ROLE_USER 또는 관리자를 나타내는 ROLE_ADMIN 중 하나를 저장합니다. MemberRepository.findByEmail()로 로그인할 계정을 찾고, ProductRepository의 기본 CRUD 기능으로 상품을 관리합니다.
 
 **실행과 예상 결과**
 
@@ -286,7 +294,9 @@ data.sql과 엔티티 필드, Repository 검색 조건을 대응시킵니다.
 
 ### 5.2.1 비밀번호 해시와 PasswordEncoder
 
-해시는 비밀번호를 그대로 저장하지 않기 위한 단방향 변환입니다. 로그인 시 저장된 해시를 복호화하는 것이 아니라 입력값이 해시에 대응하는지 matches()로 확인합니다.
+비밀번호를 그대로 DB에 저장하면 데이터가 유출되었을 때 사용자의 비밀번호도 드러납니다. 이를 줄이기 위해 원래 비밀번호를 다시 알아내기 어렵도록 단방향으로 변환한 해시를 저장합니다.
+
+로그인할 때는 저장된 해시에서 원래 비밀번호를 복원하지 않고, 입력한 비밀번호가 그 해시에 대응하는지 확인합니다. PasswordEncoder는 이러한 변환과 확인 기능을 제공하는 인터페이스이며, 이 예제에서는 BCryptPasswordEncoder 구현체를 사용합니다.
 
 이 장의 설정 메서드는 모두 같은 SecurityConfig 클래스 안에 들어갑니다. `@Configuration`은 설정 클래스를 표시하고, 뒤에서 작성할 각 `@Bean` 메서드는 Security가 사용할 객체를 빈으로 등록합니다.
 
@@ -350,7 +360,7 @@ class PasswordEncoderTests {
 
 BCryptPasswordEncoder는 PasswordEncoder 인터페이스를 구현한 클래스입니다. encode()는 비밀번호의 해시를 만들고, matches(입력값, 저장된해시)는 입력한 비밀번호가 저장된 해시와 일치하는지 확인합니다.
 
-BCrypt는 비밀번호마다 다른 해시를 만들 수 있도록 salt라는 임의의 값을 함께 사용합니다. 따라서 같은 비밀번호를 encode()해도 문자열이 달라질 수 있습니다. matches()는 저장된 해시에 포함된 정보를 이용해 입력한 비밀번호를 검증합니다. 로그인 검증에서는 새로 만든 해시를 equals()로 비교하지 않고 이 메서드를 사용합니다.
+BCrypt는 해시를 만들 때 salt라는 임의의 값을 함께 사용하므로, 같은 비밀번호를 encode()해도 문자열이 달라질 수 있습니다. matches()는 저장된 해시에 포함된 정보를 이용해 입력값을 확인하므로, 새로 만든 해시와 저장된 해시를 equals()로 비교하는 대신 이 메서드를 사용합니다.
 
 **실행과 예상 결과**
 
@@ -360,7 +370,7 @@ PasswordEncoderTests.encodeAndMatch를 실행합니다. @SpringBootTest가 없�
 
 ### 5.2.2 이메일로 계정 조회
 
-UserDetailsService는 Spring Security가 로그인할 사용자를 조회할 때 사용하는 인터페이스입니다. 이 예제에서는 이메일로 Member를 찾은 뒤, Security가 이해할 수 있는 사용자 정보로 바꾸어 반환합니다. DB 엔티티의 필드와 Security가 인증에 사용하는 값 사이를 연결하는 역할입니다.
+Spring Security가 비밀번호와 권한을 확인하려면 DB에 저장한 회원 정보를 인증에 사용할 형태로 전달해야 합니다. UserDetailsService는 로그인 ID로 사용자를 찾는 동작을 정하는 인터페이스이며, 여기서는 이메일로 Member를 조회하여 필요한 정보를 반환하도록 구현합니다.
 
 **실습 코드**
 
@@ -384,9 +394,11 @@ public UserDetailsService userDetailsService(MemberRepository memberRepository) 
 
 **코드 설명**
 
-@Bean 메서드의 매개변수인 MemberRepository는 스프링이 준비해 전달합니다. 반환하는 람다는 UserDetailsService의 사용자 조회 동작을 구현합니다. Security가 로그인 ID를 전달하면 그 값이 email 매개변수에 들어가고, findByEmail()로 실제 회원을 조회합니다. 회원이 없으면 UsernameNotFoundException을 던집니다.
+@Bean 메서드의 매개변수인 MemberRepository는 스프링이 준비해 전달합니다. 반환하는 `email -> { ... }`은 사용자 조회 동작을 구현하는 람다로, Spring Security가 로그인 ID를 전달하면 email에 그 값이 들어갑니다.
 
-조회한 회원은 User.builder()로 인증에 사용할 정보로 변환합니다. username에는 회원 이름이 아니라 이메일을, password에는 저장된 BCrypt 해시를, authorities에는 ROLE_로 시작하는 권한을 넣습니다. 이후 Security가 PasswordEncoder로 비밀번호를 확인합니다.
+var member는 오른쪽 조회 결과로 지역변수의 자료형을 판단하게 하는 자바 문법이며, 이 코드에서는 Member 타입이 됩니다. findByEmail()로 회원을 찾지 못하면 로그인할 계정이 없음을 알리는 UsernameNotFoundException을 발생시킵니다.
+
+User는 프로젝트의 Member와 달리 Spring Security가 제공하는 사용자 정보 클래스이며, User.builder()로 인증에 사용할 객체를 만듭니다. username에는 회원 이름이 아닌 이메일, password에는 저장된 BCrypt 해시, authorities에는 ROLE_로 시작하는 권한을 넣으면 Security가 이 정보로 비밀번호와 접근 권한을 확인합니다.
 
 **실행과 예상 결과**
 
@@ -396,7 +408,7 @@ public UserDetailsService userDetailsService(MemberRepository memberRepository) 
 
 ### 5.2.3 로그인 화면과 성공·실패
 
-GET /login은 Controller가 화면을 보여 주고, POST /login은 인증 필터가 받아 인증을 진행합니다. 로그인에 성공하면 상품 목록으로 이동하도록 설정되어 있습니다.
+사용자가 이메일과 비밀번호를 입력하고, 로그인에 실패하면 다시 시도할 수 있도록 로그인 화면을 준비합니다. GET /login은 컨트롤러가 화면을 보여 주고, 폼을 제출한 POST /login은 인증 필터가 받아 처리하며 성공하면 상품 목록으로 이동합니다.
 
 **실습 코드**
 
@@ -441,13 +453,15 @@ public String login() {
 
 **코드 설명**
 
-email 입력칸의 name은 SecurityConfig의 usernameParameter("email")과 연결됩니다. password는 기본 비밀번호 파라미터입니다. Controller에는 POST /login 메서드가 없습니다. th:action이 지정된 POST 폼에는 CSRF 토큰도 자동으로 추가됩니다. 실패 시 /login?error로 이동하고 param.error를 보고 한글 문구를 출력합니다.
+email 입력칸의 name은 SecurityConfig의 usernameParameter("email")과 연결되며, password는 기본 비밀번호 파라미터 이름입니다. 로그인 폼의 POST 요청은 Security가 처리하므로 컨트롤러에 별도의 POST /login 메서드를 작성하지 않습니다.
+
+실패하면 /login?error로 이동하며, param.error는 URL에 error 요청 파라미터가 있는지 확인하는 표현식입니다. 이를 조건으로 한글 안내를 표시하고, th:action이 있는 POST 폼에는 뒤에서 살펴볼 요청 위조 방지용 CSRF 토큰도 자동으로 추가됩니다.
 
 **실행과 예상 결과**
 
 홈의 로그인 링크를 누릅니다. 먼저 틀린 비밀번호를 보내고, 이어서 윤서준 이메일과 12345678로 로그인합니다.
 
-실패하면 `이메일 또는 비밀번호가 올바르지 않습니다.`가 표시됩니다. 성공하면 /products로 이동합니다. 로그인 화면에 비밀번호를 다시 채워 출력하지 않습니다.
+실패하면 `이메일 또는 비밀번호가 올바르지 않습니다.`가 표시되고, 성공하면 /products로 이동합니다. 다시 로그인할 때 비밀번호를 입력하도록 로그인 화면에 비밀번호를 채워 출력하지 않습니다.
 
 ## 5.3 권한별 상품 관리
 
@@ -471,7 +485,9 @@ email 입력칸의 name은 SecurityConfig의 usernameParameter("email")과 연�
 
 ### 5.3.1 요청별 접근 규칙
 
-SecurityFilterChain은 어떤 요청을 누구에게 허용하고 로그인·로그아웃을 어떻게 처리할지 설정합니다. 현재 예제는 한 체인으로 구성합니다. formLogin()은 폼 로그인을 처리할 인증 필터를 구성하고, authorizeHttpRequests()의 규칙은 인가 필터가 사용합니다. 설정 메서드를 작성한 순서가 필터 실행 순서는 아닙니다. 필터 순서는 Spring Security가 구성합니다.
+같은 상품 기능이라도 목록 조회는 로그인한 모든 회원에게 허용하고, 등록·수정·삭제는 관리자만 사용할 수 있도록 구분해야 합니다. 요청 주소와 HTTP 메서드에 따라 접근 조건을 정하고, 로그인·로그아웃 동작도 함께 설정합니다.
+
+HttpSecurity는 이러한 보안 규칙을 설정하는 객체이며, 설정을 마친 뒤 build()로 SecurityFilterChain을 만듭니다. authorizeHttpRequests()에는 접근 조건을, formLogin()에는 폼 로그인 동작을 지정하며, 필터의 실행 순서는 Spring Security가 구성합니다.
 
 **실습 코드**
 
@@ -507,12 +523,16 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 
 **코드 설명**
 
+`auth -> ...`, `login -> ...`, `logout -> ...`은 각 기능의 설정 동작을 전달하는 람다입니다. auth·login·logout은 개발자가 정한 매개변수 이름으로, 각각의 설정 객체에 메서드를 호출하여 규칙을 연결합니다.
+
 1. 홈·로그인·/error는 모두 허용합니다. /error는 Boot 오류 화면 처리를 위해 필요합니다.
 2. GET /products는 로그인 상태만 확인합니다.
 3. 나머지 /products 및 하위 경로는 ADMIN 역할이 필요합니다. 앞에서 먼저 일치한 규칙이 적용되므로 등록 POST가 목록 GET과 같은 권한이 되는 것은 아닙니다.
 4. hasRole("ADMIN")은 ROLE_ADMIN 권한을 확인합니다. 문자열에 ROLE_를 다시 붙여 넘기지 않습니다.
 5. defaultSuccessUrl("/products", true)는 이전 요청과 관계없이 로그인 성공 시 목록으로 보냅니다.
-6. logoutSuccessUrl("/")은 실제 로그아웃 후 홈으로 보냅니다. 별도 exceptionHandling 설정은 없습니다.
+6. logoutSuccessUrl("/")은 실제 로그아웃 후 홈으로 보냅니다.
+
+requestMatchers()는 규칙을 적용할 요청을 고릅니다. `/products/**`는 상품 주소 아래의 경로도 포함하며, authenticated()는 로그인한 사용자에게, permitAll()은 로그인 여부와 관계없이 접근을 허용합니다.
 
 **역할 이름과 권한 문자열 비교**
 
@@ -524,7 +544,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 | `hasAuthority("ROLE_ADMIN")` | `ROLE_ADMIN` |
 | `hasAuthority("ADMIN")` | `ADMIN`이므로 현재 샘플 계정의 권한과 다릅니다. |
 
-이 표는 두 검사 방식의 차이를 설명하는 독립 비교 예제로, 기존 접근 규칙은 변경하지 않습니다. ADMIN이라는 이름만으로 USER 역할까지 자동으로 부여되지는 않으며, 역할의 상하 관계를 사용하려면 별도 설정이 필요합니다. 현재 관리자가 상품 목록을 볼 수 있는 것은 `ROLE_USER`가 있어서가 아니라 목록 요청의 조건이 `authenticated()`이기 때문입니다.
+ADMIN이라는 이름만으로 USER 역할까지 자동으로 부여되지는 않으며, 역할의 상하 관계를 사용하려면 별도 설정이 필요합니다. 현재 관리자가 상품 목록을 볼 수 있는 것은 ROLE_USER가 있어서가 아니라, 목록 요청의 조건이 로그인 여부를 확인하는 authenticated()이기 때문입니다.
 
 **실행과 예상 결과**
 
@@ -534,7 +554,9 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 
 ### 5.3.2 홈·상품 목록과 권한별 링크
 
-Thymeleaf 보안 확장의 sec:authorize는 조건에 맞는 화면 요소만 표시합니다. sec:authentication은 현재 로그인 정보를 출력합니다.
+일반 회원에게 관리자 전용 링크까지 보여 주면 사용할 수 없는 기능으로 이동하게 됩니다. 화면에서는 권한에 맞는 링크를 보여 주고, 주소를 직접 입력한 요청은 서버의 접근 규칙으로 검사하도록 두 처리를 함께 적용합니다.
+
+Thymeleaf 보안 확장의 sec:authorize는 조건에 맞는 화면 요소만 표시하고, sec:authentication은 현재 로그인 정보를 출력합니다. 같은 템플릿에서 로그인 상태와 권한에 따라 다른 메뉴를 보여 줄 수 있습니다.
 
 **실습 코드**
 
@@ -635,7 +657,7 @@ public String list(Model model) {
 
 홈 화면은 로그인하지 않은 사용자에게 로그인 링크를 보여 주고, 로그인한 사용자에게는 이메일·상품 목록·로그아웃 링크를 보여 줍니다. 상품 목록 상단에도 이메일과 로그아웃 링크가 함께 표시됩니다. 관리자에게만 상품 등록과 수정·삭제 링크가 추가됩니다.
 
-컨트롤러에서 로그인 ID를 사용하려면 Authentication을 받을 수 있습니다. 예제의 홈 컨트롤러는 이 객체가 있을 때 getName()으로 이메일을 읽어 로그에 남깁니다.
+Authentication은 현재 요청의 사용자와 권한 정보를 다루는 객체로, 컨트롤러의 매개변수로 받을 수 있습니다. 홈 컨트롤러는 이 객체가 있을 때 getName()으로 로그인 ID를 읽어 로그에 남기며, 이 예제에서 로그인 ID는 이메일입니다.
 
 **실행과 예상 결과**
 
@@ -655,7 +677,7 @@ public String list(Model model) {
 
 ### 5.3.3 관리자 상품 등록
 
-상품 등록은 이미 배운 MVC 흐름입니다. Security가 먼저 권한을 검사하고 허용된 요청만 Controller로 전달합니다.
+관리자에게만 상품 등록을 허용하려면 화면에 링크를 표시하는 것뿐 아니라 등록 요청 자체도 검사해야 합니다. 앞에서 정한 보안 규칙을 통과한 요청만 컨트롤러로 전달되며, 이후의 폼 입력과 저장은 MVC에서 배운 흐름을 사용합니다.
 
 **실습 코드**
 
@@ -708,7 +730,7 @@ public String add(@ModelAttribute("product") Product product) {
 
 **코드 설명**
 
-GET /products/new는 빈 Product를 입력칸에 연결합니다. POST /products는 ID를 비우고 저장한 뒤 목록으로 이동합니다. 브라우저의 required·min은 입력 도움 조건이며 별도의 서버 Bean Validation 예제는 이 장에서 추가하지 않습니다.
+GET /products/new는 빈 Product를 입력칸에 연결하고, POST /products는 ID를 비우고 저장한 뒤 목록으로 이동합니다. 브라우저의 required는 필수 입력, min은 입력 가능한 최솟값을 지정하지만, 서버에 전달된 값까지 검증하는 Validation과는 구분해야 합니다.
 
 **실행과 예상 결과**
 
@@ -783,7 +805,7 @@ private Product findProduct(Long id) {
 
 **코드 설명**
 
-조회한 Product의 값이 폼에 들어갑니다. URL ID로 기존 상품을 찾고 이름·가격을 변경합니다. findProduct가 대상이 없으면 ResponseStatusException의 404를 전달합니다. 현재 Security 모듈은 MVC 장의 GlobalExceptionHandler를 사용하지 않습니다.
+조회한 Product의 값을 폼에 표시하고, 저장할 때는 URL의 ID로 기존 상품을 찾아 이름과 가격을 변경합니다. findProduct()에서 대상을 찾지 못하면 ResponseStatusException으로 404를 지정하며, 이 모듈은 Spring Boot의 기본 오류 처리로 응답합니다.
 
 **실행과 예상 결과**
 
@@ -814,7 +836,7 @@ public String delete(@PathVariable("id") Long id) {
 
 **코드 설명**
 
-상품 목록의 삭제 링크가 /products/실제ID/delete로 이동합니다. @GetMapping 메서드는 상품을 찾아 삭제하고 목록으로 리다이렉트합니다. 삭제 링크에는 JavaScript나 form을 넣지 않습니다. 관리자 여부는 다른 상품 관리 요청처럼 먼저 검사됩니다. 뒤에서 배우는 POST 폼의 CSRF 검증과 GET 링크의 권한 검사를 같은 기능으로 생각하지 않습니다.
+상품 목록의 삭제 링크를 누르면 /products/실제ID/delete로 GET 요청을 보내며, @GetMapping 메서드가 상품을 찾아 삭제한 뒤 목록으로 리다이렉트합니다. 다른 상품 관리 요청처럼 관리자 권한을 먼저 검사하지만, 앞에서 설명한 것처럼 GET 삭제에는 POST 폼의 CSRF 토큰 검사가 적용되지 않습니다.
 
 **실행과 예상 결과**
 
@@ -824,7 +846,7 @@ public String delete(@PathVariable("id") Long id) {
 
 ### 5.3.6 자동 403 오류 화면
 
-인증은 됐지만 필요한 권한이 없으면 403으로 응답합니다. Spring Boot는 상태 코드에 맞는 templates/error/403.html을 오류 화면으로 선택합니다.
+로그인한 사용자가 권한이 없는 기능을 요청했을 때는 접근이 거절된 이유와 돌아갈 위치를 알려 주어야 합니다. 403 오류 화면에 안내 문구와 홈 링크를 준비하면, Spring Boot가 상태 코드에 맞는 templates/error/403.html을 선택해 보여 줍니다.
 
 **실습 코드**
 
@@ -849,7 +871,7 @@ public String delete(@PathVariable("id") Long id) {
 
 **코드 설명**
 
-화면에는 상태와 안내 문구, 홈 / 링크가 있습니다. 별도 오류 Controller를 추가하거나 SecurityConfig.exceptionHandling()으로 주소를 지정하지 않았습니다. /error 요청은 보안 규칙에서 허용합니다. CSRF 토큰 오류도 403이므로 문구를 특정 권한 문제에만 한정하지 않습니다.
+화면에는 상태와 안내 문구, 홈으로 돌아가는 링크를 두며, Spring Boot의 기본 오류 처리에 필요한 /error 요청은 보안 규칙에서 허용합니다. CSRF 토큰 오류도 403으로 응답하므로 안내 문구는 특정 권한 문제에만 한정하지 않습니다.
 
 **실행과 예상 결과**
 
@@ -862,11 +884,15 @@ HTTP 403과 안내가 표시되고 홈으로 돌아갈 수 있습니다. 브라�
 > **본 교재 참고**  
 > 5.3.6 「로그인/로그아웃 커스텀」, 5.3.7 「CSRF와 CORS」
 
-로그인 정보는 세션을 통해 다음 요청에서도 사용됩니다. 로그아웃은 로그인 세션의 인증 정보를 정리하는 작업입니다. 확인 화면을 보는 것과 실제 로그아웃을 수행하는 요청을 나누어 이해합니다.
+로그인한 상태가 세션에 남아 있으면 다음 요청에서도 보호된 기능을 사용할 수 있습니다. 사용자가 로그아웃을 선택했을 때는 이 인증 정보를 정리하여, 다시 로그인하기 전에는 상품 목록에 접근하지 못하도록 해야 합니다.
+
+여기서는 로그아웃 의사를 확인하는 화면과 실제 로그아웃을 수행하는 요청을 나누어 처리합니다. 확인 화면에서 취소하면 로그인 상태를 유지하고, 확인 버튼을 누르면 Security가 로그아웃을 처리합니다.
 
 브라우저는 로그인한 사이트로 요청할 때 세션 ID 쿠키를 함께 보냅니다. 이 특성을 악용해 다른 사이트에서 사용자가 원하지 않는 변경 요청을 보내게 하는 공격을 CSRF라고 합니다. 서버가 로그인 상태만 확인하면, 사용자가 의도해서 보낸 요청인지 구분하기 어려울 수 있습니다.
 
-Spring Security는 POST 같은 요청에서 CSRF 토큰을 확인해 요청을 검증합니다. 이 실습에서는 로그인·로그아웃·상품 등록·수정 저장 폼의 숨김 입력값을 관찰합니다. 토큰을 확인하는 과정과 관리자 권한을 확인하는 과정은 서로 다른 검사입니다. 현재 상품 삭제의 GET 링크에는 POST 폼의 토큰 검사가 적용되지 않으며, 관리자 권한 검사는 별도로 적용됩니다.
+Spring Security는 POST 같은 요청에서 CSRF 토큰을 확인해 요청을 검증합니다. CSRF 토큰은 서버가 폼에 넣어 주는 확인용 값으로, 브라우저가 폼을 제출할 때 함께 보내면 서버가 검증에 사용합니다.
+
+이 실습에서는 로그인·로그아웃·상품 등록·수정 폼의 숨김 입력값을 관찰합니다. 토큰 확인과 관리자 권한 확인은 서로 다른 검사이며, 상품 삭제의 GET 링크에는 POST 폼의 토큰 검사가 적용되지 않습니다.
 
 ### 5.4.1 로그아웃 확인과 실제 처리
 
@@ -918,7 +944,9 @@ Controller가 직접 세션을 지우는 코드를 작성하지 않습니다. �
 
 ### 5.4.2 CSRF 토큰 확인
 
-앞 소절의 logout.html과 상품 등록·수정 HTML에서 `th:action`과 `method="post"`를 확인합니다. 서버가 화면을 만들 때 폼 안에 `name="_csrf"`인 숨김 입력값을 추가합니다. 토큰은 실행마다 달라질 수 있으므로 교재나 소스에 고정값을 넣지 않습니다.
+로그인 상태만으로는 사용자가 의도한 변경 요청인지 확인하기 어려우므로, 폼을 제출할 때 CSRF 토큰이 함께 전달되는지 살펴봅니다. logout.html과 상품 등록·수정 HTML의 th:action과 method="post"를 확인하면, 서버가 만든 화면의 폼 안에 name="_csrf"인 숨김 입력값이 추가됩니다.
+
+숨김 입력값은 화면에는 보이지 않지만 다른 입력값과 함께 서버로 전송됩니다. 토큰은 달라질 수 있으므로 소스에 고정값을 넣지 않고 서버가 만든 값을 사용합니다.
 
 **실행과 예상 결과**
 

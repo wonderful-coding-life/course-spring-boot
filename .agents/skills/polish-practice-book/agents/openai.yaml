@@ -1,0 +1,4 @@
+interface:
+  display_name: "실습 교재 문장 다듬기"
+  short_description: "초급 개발자를 위한 필요성 중심 설명과 용어 풀이, 자연스러운 교재 문장 개선"
+  default_prompt: "$polish-practice-book 지정한 실습 교재 범위에서 예제의 필요성을 먼저 설명하고 낯선 용어와 문장을 쉽게 다듬어 줘. 예제 코드와 프로젝트 소스는 유지해 줘."

@@ -55,7 +55,9 @@ HTML의 h1·h2는 제목, p는 문단, a는 링크, table·tr·th·td는 표, fo
 
 ### 4.1.1 Model과 화면 이름
 
-Model은 컨트롤러에서 화면으로 값을 전달하는 공간입니다. 컨트롤러가 넣은 데이터를 Thymeleaf가 읽어 HTML을 만듭니다. @Controller 메서드가 "text"를 반환하면 이 예제에서는 text.html을 찾습니다. 문자열 "text" 자체를 응답 본문으로 보내는 것이 아닙니다.
+회원 이름처럼 요청에 따라 달라지는 값을 화면에 표시하려면, 컨트롤러가 조회하거나 준비한 데이터를 템플릿에 전달해야 합니다. Model은 이 데이터를 이름과 함께 보관하여 화면에 전달하는 공간이며, Thymeleaf가 그 값을 읽어 HTML을 만듭니다.
+
+@Controller 메서드가 "text"를 반환하면 이 예제에서는 text.html을 찾아 화면을 만듭니다. 문자열 "text" 자체를 응답 본문으로 보내는 것이 아니라 사용할 템플릿의 이름을 지정하는 것입니다.
 
 ThymeleafController의 메서드는 다음 선언부 안에 들어갑니다. 메서드를 제외한 구조이며, DB에 연결하는 주입 필드는 필요하지 않습니다.
 
@@ -105,7 +107,9 @@ public String text(Model model) {
 
 **코드 설명**
 
-`return "index"`는 templates/index.html, `return "text"`는 templates/text.html을 의미합니다. model.addAttribute의 첫 인자는 화면에서 찾을 이름, 두 번째는 실제 데이터입니다. sampleMembers()의 ID 1~4는 메모리 예제에서 직접 지정한 값입니다. 실제 DB의 ID 규칙과는 관계가 없습니다.
+`return "index"`는 templates/index.html, `return "text"`는 templates/text.html을 사용할 화면으로 지정합니다. model.addAttribute()의 첫 인자는 화면에서 찾을 이름이고 두 번째는 실제 데이터이며, 템플릿은 이 이름으로 값을 읽습니다.
+
+sampleMembers()의 ID 1~4는 메모리 예제에서 직접 지정한 값입니다. DB가 생성한 ID와 구분하여, 화면에 전달하는 값을 관찰하는 데 사용합니다.
 
 **실행과 예상 결과**
 
@@ -114,6 +118,8 @@ spring-thymeleaf의 DemoApplication을 실행하고 http://localhost:8080 에서
 값 출력·조건문·목록·링크·폼·날짜 실습으로 이동할 수 있습니다. /text에서는 윤서준 데이터를 사용합니다.
 
 ### 4.1.2 값·객체·문장 출력
+
+HTML에 회원 이름을 직접 적어 두면 다른 회원을 보여 줄 때마다 파일을 수정해야 합니다. Model로 전달한 값을 th:text로 출력하면 같은 템플릿으로도 요청에 맞는 회원 정보를 표시할 수 있습니다.
 
 변수 표현식 ${...}는 Model의 값을 읽고, 점(.)은 객체의 속성을 읽습니다. th:text는 태그 안의 내용을 해당 값으로 바꿉니다.
 
@@ -146,7 +152,9 @@ spring-thymeleaf의 DemoApplication을 실행하고 http://localhost:8080 에서
 
 **코드 설명**
 
-`${name}`은 Model에 넣은 name, `${member.name}`은 member 객체의 이름입니다. `|...|`는 문장 안에 값을 넣기 위한 문법입니다. HTML에 미리 적힌 본문은 템플릿을 읽을 때의 예시이며 서버 처리 후 실제 값으로 교체됩니다. th:text는 입력값을 일반 텍스트로 출력하므로 HTML 태그 문자열을 그대로 실행하지 않습니다.
+`${name}`은 Model에 넣은 name을 읽고, `${member.name}`은 member 객체의 이름을 읽습니다. `|...|`를 사용하면 문장 안에 값을 넣어 인사말처럼 데이터와 문구가 섞인 내용을 만들 수 있습니다.
+
+HTML에 미리 적힌 본문은 서버가 처리하면서 실제 값으로 교체합니다. th:text는 입력값을 일반 텍스트로 출력하므로, 값에 HTML 태그가 들어 있어도 화면을 구성하는 태그로 실행하지 않습니다.
 
 **실행과 예상 결과**
 
@@ -156,7 +164,7 @@ spring-thymeleaf의 DemoApplication을 실행하고 http://localhost:8080 에서
 
 ### 4.1.3 조건에 따라 표시
 
-조건문은 조건에 맞는 태그만 HTML 결과에 포함합니다. th:if는 참, th:unless는 거짓일 때 표시합니다.
+회원의 나이에 따라 서로 다른 안내 문구를 보여 주려면 조건에 맞는 내용만 화면에 포함해야 합니다. th:if는 조건이 참일 때, th:unless는 거짓일 때 해당 태그를 HTML 결과에 포함합니다.
 
 **실습 코드**
 
@@ -196,7 +204,7 @@ public String condition(Model model) {
 
 **코드 설명**
 
-현재 코드는 실습 기준으로 나이가 20 이상인지 비교합니다. 20살이라는 기준은 이 예제의 표시 조건입니다. 두 문구를 모두 출력한 뒤 CSS로 숨기는 방식이 아니라 서버에서 조건에 맞는 태그만 결과에 포함합니다.
+여기서는 나이가 20 이상인지에 따라 안내 문구를 선택하며, 20살은 이 예제에서 정한 표시 조건입니다. 서버가 조건에 맞는 태그만 결과에 포함하므로 브라우저에는 선택된 문구만 전달됩니다.
 
 **실행과 예상 결과**
 
@@ -206,7 +214,7 @@ public String condition(Model model) {
 
 ### 4.1.4 회원 목록 반복 출력
 
-목록의 각 요소에 대해 같은 HTML 구조를 반복하려면 th:each를 사용합니다. 자바 for문처럼 현재 요소를 가리키는 이름을 정해 사용할 수 있습니다.
+회원 수만큼 HTML 행을 직접 작성하면 데이터가 늘거나 줄 때마다 화면 코드도 바꾸어야 합니다. th:each를 사용하면 목록의 각 회원에 대해 같은 HTML 구조를 반복할 수 있으며, 자바 for문처럼 현재 요소를 가리킬 이름을 정해 사용합니다.
 
 **실습 코드**
 
@@ -263,7 +271,7 @@ public String list(Model model) {
 
 ### 4.1.5 회원 정보 링크
 
-@{...}는 URL을 만드는 표현식입니다. 링크에 검색 조건을 넣으면 Controller가 @RequestParam으로 받아 해당 데이터를 골라 전달할 수 있습니다.
+목록에서 회원 이름을 눌렀을 때 그 회원의 정보를 보려면, 어떤 회원을 선택했는지 서버에 전달해야 합니다. @{...}로 만드는 링크에 회원 ID를 넣으면 컨트롤러가 @RequestParam으로 받아 해당 회원을 선택할 수 있습니다.
 
 **실습 코드**
 
@@ -315,7 +323,7 @@ public String link(@RequestParam(name = "id", defaultValue = "1") Long id, Model
 
 **코드 설명**
 
-`@{/link(id=${member.id})}`는 /link?id=1 같은 URL을 만듭니다. @RequestParam의 defaultValue는 id를 생략했을 때 사용할 값입니다. Controller의 반복문은 ID가 같은 회원을 찾아 Model에 넣습니다. 문법 실습에서는 화면에 제공된 회원 1~4의 링크를 사용합니다.
+`@{/link(id=${member.id})}`는 /link?id=1 같은 URL을 만들며, 컨트롤러는 전달받은 ID와 같은 회원을 찾아 Model에 넣습니다. @RequestParam의 defaultValue는 id를 생략했을 때 사용할 값으로, 여기서는 화면에 제공된 회원 1~4의 링크를 눌러 선택 결과를 비교합니다.
 
 **실행과 예상 결과**
 
@@ -328,7 +336,9 @@ public String link(@RequestParam(name = "id", defaultValue = "1") Long id, Model
 > **본 교재 참고**  
 > 5.4.5 「게시판 웹 화면 구현」
 
-form은 입력값을 서버에 전송합니다. method="post"는 POST 요청, th:action은 보낼 주소입니다. th:object로 객체를 선택하고 *{속성}으로 그 객체의 값을 다룹니다.
+회원 정보를 화면에 표시하는 데서 나아가 사용자가 입력한 이름·이메일·나이를 서버로 보내려면 입력 폼이 필요합니다. form은 입력값을 서버에 전송하며, method="post"는 POST 요청을, th:action은 보낼 주소를 지정합니다.
+
+th:object는 폼에서 사용할 객체를 선택하고, *{속성}은 선택한 객체의 속성을 읽는 표현식입니다. 각 입력칸에 th:field를 지정하면 해당 속성과 입력값을 연결할 수 있습니다.
 
 **실습 코드**
 
@@ -420,9 +430,11 @@ public String submit(@ModelAttribute("member") Member member) {
 
 GET /form은 빈 Member를 화면에 전달합니다. th:object로 이 객체를 선택하고 th:field를 각 입력칸에 붙이면 name·id·value가 해당 속성과 연결됩니다. 예를 들어 이름 입력칸의 name이 name이므로 서버는 전달된 값을 Member의 name 속성에 넣을 수 있습니다.
 
-POST /form의 @ModelAttribute는 폼에서 보낸 이름·이메일·나이를 객체에 담습니다. 입력값을 객체 속성에 연결하는 과정을 바인딩이라고 합니다. 이 객체는 Model에도 들어가므로 결과 템플릿에서 다시 사용할 수 있습니다. 폼 입력을 받는 @ModelAttribute와 JSON 본문을 받는 @RequestBody는 입력 형식에 맞추어 구분합니다.
+POST /form의 @ModelAttribute는 폼에서 보낸 이름·이메일·나이를 객체에 담으며, 이처럼 입력값을 객체 속성에 연결하는 과정을 바인딩이라고 합니다. 이 객체는 Model에도 들어가므로 결과 템플릿에서 입력 내용을 다시 사용할 수 있습니다.
 
-**독립 예제: 일반 폼과 JSON의 전달 형식**
+폼 입력은 @ModelAttribute로 연결하고, 3장에서 사용한 JSON 본문은 @RequestBody로 받습니다. 같은 회원 정보를 보내더라도 본문의 형식에 따라 처리 방법을 구분합니다.
+
+**일반 폼과 JSON의 전달 형식 비교하기**
 
 같은 회원 정보를 보내더라도 일반 HTML 폼과 JSON 요청은 본문의 모양이 다릅니다. 파일 업로드가 없는 이 예제의 POST 폼은 기본적으로 `application/x-www-form-urlencoded` 형식을 사용하며, 입력칸의 `name`을 항목 이름으로 삼아 값을 보냅니다.
 
@@ -438,7 +450,7 @@ POST /form의 @ModelAttribute는 폼에서 보낸 이름·이메일·나이를 �
 email=JungHyuk%40campus.com&age=10
 ```
 
-같은 값을 JSON으로 보내면 다음과 같습니다. 이는 전달 형식을 비교하는 독립 예제이므로 기존 폼이나 Controller를 변경하거나 별도의 요청을 실행하지 않습니다.
+같은 이메일과 나이를 JSON 본문으로 표현하면 다음과 같습니다. 폼 데이터와 항목 이름은 같지만 본문을 구성하는 문법이 다르다는 점을 비교합니다.
 
 ```json
 {"email":"JungHyuk@campus.com","age":10}
@@ -502,7 +514,7 @@ public String utility(Model model) {
 > **본 교재 참고**  
 > 5.2.4 「타임리프의 레이아웃 관리」
 
-여러 화면에서 반복하는 메뉴와 하단 문구를 한곳에 모을 수 있습니다. fragment는 재사용할 HTML 부분의 이름입니다.
+메뉴와 하단 문구를 화면마다 복사해 두면 내용이 바뀔 때 여러 파일을 함께 수정해야 합니다. 반복되는 HTML을 공통 조각인 fragment로 모아 두면, 한곳을 수정하여 여러 화면에 같은 내용을 적용할 수 있습니다.
 
 **실습 코드**
 
@@ -564,7 +576,7 @@ spring-mvc는 브라우저 입력을 DB에 반영합니다. H2 메모리 DB는 �
 
 ### 4.2.1 스키마와 데이터 자동 초기화
 
-Spring Boot는 이 프로젝트의 내장 메모리 DB를 준비하면서 resources의 schema.sql과 data.sql을 실행합니다. schema.sql이 테이블을 만들고 data.sql이 값을 넣습니다.
+앱을 다시 실행할 때마다 같은 회원과 게시글로 실습하려면 테이블과 초기 데이터를 함께 준비해야 합니다. Spring Boot는 이 프로젝트의 내장 메모리 DB를 준비하면서 schema.sql로 테이블을 만들고 data.sql로 값을 넣습니다.
 
 **실습 코드**
 
@@ -605,7 +617,9 @@ CREATE TABLE IF NOT EXISTS article (
 
 **코드 설명**
 
-ddl-auto=none은 JPA의 별도 테이블 생성을 끕니다. 테이블 생성은 SQL이 담당하도록 역할을 정한 것입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원합니다. data.sql의 본문은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 회원 4명과 각 25개의 글을 준비합니다.
+ddl-auto=none은 JPA의 별도 테이블 생성을 끄고 SQL이 테이블을 만들도록 역할을 정한 설정입니다. H2 기본 모드는 공통 SQL의 AUTO_INCREMENT를 지원하므로, 같은 구조의 테이블을 준비할 수 있습니다.
+
+data.sql은 공통 샘플(`spring-mvc/src/main/resources/data.sql`)을 사용합니다. 회원 4명과 회원별 게시글 25개를 준비하여, 앱을 시작할 때마다 같은 상태에서 화면 기능을 확인합니다.
 
 DB 내용을 직접 확인하고 싶다면 /h2-console을 사용할 수 있습니다. 실행 로그에 표시된 실제 jdbc:h2:mem:... 주소와 사용자 sa, 빈 비밀번호로 접속합니다. 화면 CRUD는 콘솔을 열지 않아도 실습할 수 있습니다.
 
@@ -753,7 +767,11 @@ private Member findMember(Long id) {
 
 **코드 설명**
 
-목록의 회원 이름은 실제 ID가 들어간 상세 링크입니다. URL의 {id}는 @PathVariable로 받습니다. findMember()는 공통으로 조회하고 없으면 NoSuchElementException을 던집니다. 상세 화면의 th:object는 member를 선택하고 *{name} 등으로 값을 출력합니다. 메뉴와 하단은 MVC의 common fragment를 사용합니다.
+목록의 회원 이름에는 실제 회원 ID가 들어간 상세 링크가 연결되며, 컨트롤러는 URL의 {id}를 @PathVariable로 받습니다. 목록의 #lists.isEmpty(members)는 회원 목록이 비어 있는지 확인하는 Thymeleaf 기능으로, 회원이 없을 때 안내 문구를 표시합니다.
+
+findMember()는 회원을 조회하고, 찾지 못하면 조회 대상이 없음을 나타내는 NoSuchElementException을 발생시킵니다. 뒤에서 작성하는 공통 오류 처리기가 이 예외를 404 응답으로 바꾸어 안내 화면을 보여 줍니다.
+
+상세 화면의 th:object는 member를 선택하고 *{name} 등으로 값을 출력합니다. 메뉴와 하단은 common.html의 공통 화면 조각을 사용합니다.
 
 **실행과 예상 결과**
 
@@ -763,7 +781,9 @@ private Member findMember(Long id) {
 
 ### 4.3.2 회원 등록
 
-등록 화면은 빈 Member를 입력칸과 연결합니다. 등록 요청을 처리한 뒤에는 redirect를 사용해 목록 GET 요청으로 이동합니다.
+회원을 등록한 뒤 결과 화면을 바로 보여 주면, 사용자가 새로고침할 때 같은 등록 요청을 다시 보낼 수 있습니다. 저장을 마친 뒤에는 브라우저가 회원 목록을 새로 조회하도록 리다이렉트하여, 새로고침해도 조회 요청만 반복되도록 합니다.
+
+등록 화면을 열 때는 빈 Member를 입력칸과 연결하고, 제출된 값을 저장한 뒤 redirect로 목록의 GET 요청으로 이동합니다.
 
 **실습 코드**
 
@@ -828,7 +848,9 @@ public String add(@ModelAttribute("member") Member member) {
 
 **코드 설명**
 
-GET /members/new의 @ModelAttribute가 빈 객체를 준비합니다. 폼의 object 이름 member와 Controller의 이름이 같습니다. POST /members는 입력값을 엔티티로 받아 ID를 비우고 저장합니다. `return "member-add"`는 화면 렌더링, `return "redirect:/members"`는 브라우저에 다른 주소로 다시 요청하도록 하는 응답입니다.
+GET /members/new의 @ModelAttribute가 빈 객체를 준비하며, 폼의 th:object 이름 member를 컨트롤러에서 사용하는 이름과 맞춥니다. POST /members는 입력값을 엔티티로 받아 ID를 비우고 저장합니다.
+
+`return "member-add"`는 템플릿으로 화면을 만드는 응답입니다. `return "redirect:/members"`는 브라우저에 다른 주소로 다시 요청하도록 안내합니다.
 
 **실행과 예상 결과**
 
@@ -921,7 +943,7 @@ public String edit(@PathVariable("id") Long id,
 
 **코드 설명**
 
-폼의 th:field가 조회한 회원 값을 표시합니다. 수정 대상의 ID는 action URL에 들어갑니다. 저장 시 찾은 기존 엔티티에 name·email·age를 복사하므로 URL의 ID가 수정 대상을 결정합니다. POST 본문에 임의로 id를 넣는 방식으로 대상을 바꾸지 않습니다.
+폼의 th:field가 조회한 회원 값을 표시하고, 수정 대상의 ID는 폼을 전송할 URL에 넣습니다. 저장할 때는 그 ID로 찾은 기존 엔티티에 name·email·age를 복사하므로, POST 본문의 id를 바꾸어 수정 대상을 지정하는 구조가 아닙니다.
 
 **실행과 예상 결과**
 
@@ -931,7 +953,7 @@ public String edit(@PathVariable("id") Long id,
 
 ### 4.3.4 회원 삭제와 안내 메시지
 
-관계가 있는 데이터를 무조건 지우지 않도록 작성한 글의 존재 여부를 확인합니다. 안내가 필요하면 이동한 화면에서 한 번 사용할 메시지를 전달할 수 있습니다.
+게시글의 작성자인 회원을 삭제하면 기존 글과 작성자의 연결에 문제가 생기므로, 먼저 작성한 글이 있는지 확인해야 합니다. 삭제할 수 없는 경우에는 상세 화면으로 돌아가 그 이유를 알려 주며, 이동한 화면에서 한 번 사용할 안내 문구를 전달합니다.
 
 **실습 코드**
 
@@ -954,7 +976,9 @@ public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAtt
 
 **코드 설명**
 
-기존 샘플 회원은 모두 게시글 작성자입니다. existsByMember()가 true이면 삭제하지 않고 RedirectAttributes.addFlashAttribute()로 안내를 전달한 뒤 상세로 이동합니다. flash 값은 리다이렉트 후 화면에서 사용하는 일회성 값입니다. 글이 없는 회원은 delete() 후 목록으로 갑니다. 상세 HTML의 삭제 form은 POST 요청입니다.
+기존 샘플 회원은 모두 게시글 작성자이므로, existsByMember()가 true이면 삭제하지 않고 상세 화면으로 돌아갑니다. RedirectAttributes는 리다이렉트할 다음 화면에 값을 전달하는 객체이며, addFlashAttribute()로 넣은 안내는 이동한 화면에서 한 번 사용합니다.
+
+작성한 글이 없는 회원은 delete()로 삭제한 뒤 목록으로 이동합니다. 상세 화면의 삭제 폼은 POST 요청으로 전송합니다.
 
 **실행과 예상 결과**
 
@@ -1019,7 +1043,9 @@ MemberForm에는 3장에서 사용한 @NotBlank와 @Email에 더해 @Size로 이
 
 ### 4.4.2 검증 결과와 입력값 유지
 
-@Valid는 폼 객체에 선언된 검증 규칙을 적용하도록 하며, 검증 대상 매개변수 바로 뒤의 BindingResult는 오류 정보를 받습니다. 3장의 REST API에서는 검증에 실패하면 기본 400 오류 응답을 받았지만, 이 예제에서는 컨트롤러가 오류를 확인하고 입력값과 메시지를 담은 등록 화면을 다시 보여 줍니다. DB 조회가 필요한 이메일 중복은 직접 검사해 같은 오류 목록에 넣습니다.
+잘못된 입력이 있을 때 입력 내용을 모두 지우면 사용자는 처음부터 다시 작성해야 합니다. 입력값을 유지하면서 어느 항목을 고쳐야 하는지 알려 줄 수 있도록, 오류 메시지와 함께 등록 화면을 다시 보여 줍니다.
+
+@Valid는 폼 객체의 검증 규칙을 적용하도록 하며, 바로 뒤의 BindingResult는 검증 오류와 입력값을 자료형에 맞게 바꾸는 과정의 오류를 받습니다. 3장의 기본 400 오류 응답과 달리 여기서는 컨트롤러가 오류를 확인하여 화면을 선택하고, DB 조회가 필요한 이메일 중복도 직접 검사해 같은 오류 목록에 넣습니다.
 
 | 구분 | 3장의 REST API 예제 | 현재 MVC 폼 예제 |
 |---|---|---|
@@ -1105,7 +1131,9 @@ public String addValidation(@Valid @ModelAttribute("memberForm") MemberForm form
 
 **코드 설명**
 
-BindingResult는 검증 대상 매개변수 바로 뒤에 둡니다. rejectValue의 첫 값 email은 오류가 생긴 필드, duplicate는 오류 코드, 마지막 문자열은 표시 문구입니다. hasErrors()면 같은 템플릿 이름을 반환해 입력 객체와 오류 정보를 유지합니다. th:errors가 해당 항목의 메시지를 출력합니다. novalidate는 브라우저의 내장 형식 검증을 끄고 서버 메시지를 관찰하기 위한 HTML 속성입니다.
+BindingResult는 검증 대상 매개변수 바로 뒤에 두며, rejectValue()로 필드별 오류를 추가할 수 있습니다. 첫 값 email은 오류가 생긴 필드, duplicate는 오류를 구별하는 코드, 마지막 문자열은 표시할 문구입니다.
+
+hasErrors()가 true이면 같은 등록 템플릿을 반환하여 입력 객체와 오류 정보를 유지하고, th:errors로 각 항목의 메시지를 표시합니다. 폼의 novalidate는 브라우저의 내장 형식 검증을 끄고 서버가 만든 메시지를 관찰하기 위한 HTML 속성입니다.
 
 **타입 변환 오류와 검증 오류**
 
@@ -1117,7 +1145,7 @@ BindingResult는 검증 대상 매개변수 바로 뒤에 둡니다. rejectValue
 | `age=-1` | 정수 변환 후 검증 | 정수 변환은 성공하지만 `@Min(0)` 검증에 실패합니다. |
 | `age=abc` | 타입 변환 | 정수로 변환하지 못해 `typeMismatch` 바인딩 오류가 기록됩니다. |
 
-마지막 행은 서버로 전달된 데이터를 가정한 독립 비교 예제로, 브라우저의 숫자 입력칸에 문자를 입력하는 실습은 아닙니다. 타입 변환 오류의 메시지는 애너테이션의 `message`와 다를 수 있지만, 현재 코드처럼 `hasErrors()`를 확인하면 저장하지 않고 입력 화면에서 오류를 안내할 수 있습니다.
+age=abc처럼 정수로 바꿀 수 없는 값이 서버에 전달되면, 검증 규칙을 검사하기 전에 자료형 변환부터 실패합니다. 이때의 메시지는 애너테이션의 message와 다를 수 있지만, hasErrors()로 오류를 확인하여 저장하지 않고 입력 화면에서 안내할 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -1144,7 +1172,7 @@ BindingResult는 검증 대상 매개변수 바로 뒤에 둡니다. rejectValue
 
 ### 4.5.1 화면에 전달할 게시글 DTO
 
-엔티티에 연결된 작성자 객체 전체를 화면에 넘기기보다 화면에서 사용할 정보만 담을 수 있습니다.
+게시글 화면에는 제목·본문·날짜·작성자 이름이 필요하지만, 작성자 객체의 모든 정보까지 전달할 필요는 없습니다. 화면에 표시할 값을 DTO로 모아 전달하면, 템플릿은 엔티티의 내부 관계를 따라가지 않고도 필요한 값을 읽을 수 있습니다.
 
 **실습 코드**
 
@@ -1219,7 +1247,9 @@ public class ArticleService {
 
 **코드 설명**
 
-ArticleResponse는 화면에서 사용할 제목·본문·날짜·작성자 이름을 담습니다. 서비스는 엔티티를 조회한 뒤 toResponse()로 이 값들을 옮깁니다. findAll()의 Page.map()은 목록의 각 엔티티를 DTO로 바꾸면서 전체 개수와 페이지 정보를 유지합니다. findById()에서 대상을 찾지 못하면 NoSuchElementException이 발생하며, 뒤에서 작성할 공통 오류 처리기가 이를 처리합니다.
+ArticleResponse는 화면에서 사용할 제목·본문·날짜·작성자 이름을 담으며, 서비스의 toResponse()가 엔티티에서 이 값들을 옮깁니다. findAll()의 Page.map()은 목록의 각 엔티티를 DTO로 바꾸면서 전체 개수와 페이지 정보를 유지합니다.
+
+findById()에서 대상을 찾지 못하면 NoSuchElementException이 발생합니다. 뒤에서 작성할 공통 오류 처리기는 이 예외를 받아 조회 대상이 없다는 안내를 표시합니다.
 
 **실행과 예상 결과**
 
@@ -1320,20 +1350,26 @@ public String detail(@PathVariable("id") Long id, Model model) {
 
 **코드 설명**
 
-PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니다. @Controller의 return 값은 DTO가 아니라 화면 이름입니다. Model에 page 또는 article을 넣고 템플릿에서 같은 이름으로 읽습니다. 날짜는 #temporals.format()으로 표시합니다. 본문은 th:text를 사용해 일반 텍스트로 출력합니다.
+@PageableDefault는 한 페이지 10개·ID 내림차순을 기본 조회 조건으로 지정합니다. 컨트롤러는 Model에 page 또는 article을 넣고 화면 이름을 반환하며, 템플릿은 같은 이름으로 데이터를 읽습니다.
+
+날짜는 앞에서 사용한 #temporals.format()으로 읽기 쉬운 문자열로 바꿉니다. 본문은 th:text를 사용하여 일반 텍스트로 출력합니다.
 
 **실행과 예상 결과**
 
 /articles에서 제목을 누르고 상세에서 목록으로 돌아옵니다.
 
-샘플 기준으로 전체 게시글 수 100과 현재 페이지의 10개가 표시됩니다. 목록은 ID가 큰 글부터 정렬되며, 화면의 페이지 번호는 1부터 보입니다. 제목 링크를 열면 그 글의 작성자 이름과 본문을 확인할 수 있습니다. 화면 하단의 2를 누르면 주소의 page가 1로 바뀌고 다음 10개가 표시됩니다.
+샘플 기준으로 전체 게시글 수 100과 현재 페이지의 10개가 표시되며, ID가 큰 글부터 정렬됩니다. 제목 링크를 열면 그 글의 작성자 이름과 본문을 확인할 수 있습니다.
+
+화면의 페이지 번호는 1부터 표시하므로, 하단의 2를 누르면 주소의 page가 1로 바뀌고 다음 10개가 나타납니다. 서버가 사용하는 페이지 번호와 화면에 표시하는 번호를 함께 확인합니다.
 
 ### 4.5.3 페이징 fragment 연결
 
 > **본 교재 참고**  
 > 5.2.4 「타임리프의 레이아웃 관리」, 5.4.5 「게시판 웹 화면 구현」
 
-페이징은 URL의 page 값을 바꾸어 같은 목록을 다시 요청하는 방식입니다. 공통 fragment는 Page와 목록 주소를 인자로 받습니다.
+게시글을 여러 페이지로 나누어 보여 주려면 사용자가 다른 페이지로 이동할 링크도 필요합니다. 페이지 번호와 이전·다음 링크를 공통 화면 조각으로 만들면 다른 목록에서도 같은 구조를 사용할 수 있습니다.
+
+페이징 링크는 URL의 page 값을 바꾸어 목록을 다시 요청합니다. 공통 조각에는 조회 결과인 Page와 목록 주소를 전달하여, 해당 목록의 페이지 수에 맞는 링크를 만듭니다.
 
 **실습 코드**
 
@@ -1377,7 +1413,9 @@ PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니�
 
 **코드 설명**
 
-`pagination(page, baseUrl)`이 페이지 정보와 주소를 받습니다. 목록의 `common :: pagination(${page}, '/articles')`가 호출 위치입니다. #numbers.sequence(0, totalPages-1)은 페이지 번호 목록을 만듭니다. 화면에는 1을 더해 표시하고 현재 번호는 strong으로 굵게 표시합니다. 첫 페이지에서는 이전, 마지막에서는 다음 링크를 만들지 않습니다. 페이지가 하나도 없으면 번호 목록 생성을 건너뜁니다.
+`pagination(page, baseUrl)`은 페이지 정보와 목록 주소를 받는 화면 조각이며, 목록 화면의 `common :: pagination(${page}, '/articles')`에서 사용합니다. #numbers.sequence(0, totalPages-1)은 시작 번호부터 마지막 번호까지의 숫자 목록을 만드는 Thymeleaf 기능입니다.
+
+서버의 페이지 번호는 0부터 시작하므로 화면에는 1을 더해 표시하고, 현재 페이지는 strong 태그로 굵게 표시합니다. 첫 페이지에서는 이전 링크를, 마지막 페이지에서는 다음 링크를 만들지 않으며, 페이지가 없으면 번호 목록 생성도 건너뜁니다.
 
 **실행과 예상 결과**
 
@@ -1387,7 +1425,9 @@ PageableDefault는 한 페이지 10개·ID 내림차순의 기본 조건입니�
 
 ## 4.6 공통 오류 처리
 
-여러 Controller에서 같은 예외를 처리할 때 공통 처리기를 둘 수 있습니다. @ControllerAdvice는 공통 적용 범위, @ExceptionHandler는 처리할 예외 종류를 지정합니다. 오류 화면에 적는 숫자와 실제 HTTP 응답 상태는 다른 개념이므로 @ResponseStatus로 응답도 지정합니다.
+여러 컨트롤러에서 같은 예외를 각각 처리하면 오류 처리 코드와 안내 문구가 여러 곳에 흩어집니다. 공통 오류 처리기를 두면 예외 종류에 따라 응답 상태와 화면을 일관되게 정할 수 있습니다.
+
+@ControllerAdvice는 여러 컨트롤러의 예외를 처리할 클래스를 지정하고, @ExceptionHandler는 각 메서드가 받을 예외 종류를 정합니다. 화면에 표시한 숫자만으로 HTTP 상태가 바뀌지는 않으므로 @ResponseStatus로 실제 응답 상태도 지정합니다.
 
 ### 4.6.1 400·404·409·500 예외 처리
 
@@ -1480,7 +1520,9 @@ public class GlobalExceptionHandler {
 
 **코드 설명**
 
-숫자로 받을 ID에 문자가 들어오면 MethodArgumentTypeMismatchException이 발생하며 400으로 응답합니다. 회원·게시글 조회의 NoSuchElementException은 404입니다. DataIntegrityViolationException은 409로 바꿉니다. 그 밖에 이 처리기로 전달되는 Exception은 500입니다. DB 예외 전문은 로그에 남기고 화면에는 정해진 메시지를 표시합니다. 회원 등록 검증 버전의 BindingResult는 예외를 던지는 대신 원래 입력 화면에서 처리합니다.
+숫자로 받을 ID에 문자가 들어오는 등 요청값을 필요한 자료형으로 바꾸지 못하면 MethodArgumentTypeMismatchException이 발생하며, 여기서는 400으로 응답합니다. 조회 대상이 없을 때의 NoSuchElementException은 404로, DB 제약 위반인 DataIntegrityViolationException은 409로 처리합니다.
+
+그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, log.error("문구", ex)로 안내 문구와 예외의 상세 내용을 로그에 기록합니다. 사용자 화면에는 정해진 메시지만 표시하며, 회원 등록의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
 
 **실행과 예상 결과**
 
@@ -1496,7 +1538,7 @@ public class GlobalExceptionHandler {
 | 검증 등록에서 잘못된 입력 또는 이메일 중복 | 200 | 입력값과 필드별 오류를 유지한 등록 화면 |
 | 예상하지 못한 서버 오류 | 500 | 공통 오류 화면 |
 
-검증 버전은 오류를 BindingResult로 확인하고 입력 화면을 다시 보여 주므로, 잘못된 입력이라고 해서 항상 400을 반환하는 것은 아닙니다. 500 처리는 예기치 못한 오류를 안내하기 위한 것이며, 이 실습을 위해 고의 오류 URL을 추가할 필요는 없습니다.
+검증 버전은 BindingResult로 오류를 확인하고 입력 화면을 다시 보여 주므로, 잘못된 입력이라도 화면을 정상 반환한 응답 상태는 200입니다. 예상하지 못한 서버 오류는 공통 처리기에서 500 응답과 안내 화면으로 처리합니다.
 
 ## 4.7 학습 확인
 
