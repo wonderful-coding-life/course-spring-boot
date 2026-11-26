@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#245c49">
+  <title>캠퍼스 쇼핑몰 · AI 상담</title>
+  <link rel="stylesheet" href="chat.css">
+  <script type="module" src="chat.js"></script>
+</head>
+<body>
+  <main class="chat-app" aria-label="캠퍼스 쇼핑몰 상담">
+    <header class="header">
+      <a class="brand" href="./" aria-label="캠퍼스 쇼핑몰 상담 홈"><span class="brand-icon" aria-hidden="true">C</span><span>캠퍼스 쇼핑몰<small>AI 고객 상담</small></span></a>
+      <div class="header-actions">
+        <div class="name-field"><label for="username">사용자 이름</label><input id="username" name="username" autocomplete="username" placeholder="이름을 입력해 주세요" required></div>
+        <button id="new-chat" class="secondary" type="button"><span aria-hidden="true">＋</span> 새 대화</button>
+      </div>
+    </header>
+
+    <section id="conversation" class="conversation" aria-label="대화 내역" tabindex="0">
+      <div id="welcome" class="welcome">
+        <span class="welcome-mark" aria-hidden="true">c.</span>
+        <p class="eyebrow">CAMPUS SHOPPING ASSISTANT</p>
+        <h1>무엇을 도와드릴까요?</h1>
+        <p>주문부터 반품까지, 궁금한 내용을 편하게 남겨 주세요.<br>사용자 이름을 입력하면 상담을 시작할 수 있어요.</p>
+        <div class="topics" aria-label="상담 가능한 주제"><span>주문 조회</span><span>주문 취소</span><span>반품 안내</span></div>
+      </div>
+      <div id="messages" class="messages"></div>
+    </section>
+
+    <footer class="composer-area">
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <div class="composer-status"><span id="status" role="status" aria-live="polite">사용자 이름을 입력해 주세요.</span><span class="plain-badge">AI 상담</span></div>
+      <form id="chat-form" class="composer">
+        <label class="sr-only" for="message">상담 메시지</label>
+        <textarea id="message" rows="2" placeholder="궁금한 내용을 입력해 주세요" aria-describedby="input-help" required></textarea>
+        <button id="send" type="submit" disabled><span id="send-label">전송</span><span id="send-icon" aria-hidden="true">↑</span></button>
+      </form>
+      <div class="composer-help"><span id="input-help">Enter 전송 · Shift+Enter 줄바꿈</span><span>AI 답변은 정확하지 않을 수 있습니다.</span></div>
+    </footer>
+  </main>
+</body>
+</html>
