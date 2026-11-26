@@ -43,7 +43,7 @@ function Para([string]$s,[string]$style='Normal',[string]$extra='') {
 function Heading([string]$s,[int]$level,[bool]$front=$false) {
     $style = if ($front) { if ($level -eq 1) { 'FrontTitle' } else { 'FrontHeading' } } else { 'Heading'+$level }
     if (-not $front) { $script:headingRecords.Add([pscustomobject]@{Text=$s;Level=$level}) }
-    if ($s -eq '5.5 학습 확인') { Para $s $style '<w:spacing w:before="160" w:after="90"/>' } else { Para $s $style }
+    if ($s -in @('3.6 학습 확인', '5.5 학습 확인')) { Para $s $style '<w:spacing w:before="160" w:after="90"/>' } else { Para $s $style }
 }
 function Code([string[]]$lines,[string]$language) {
     $script:codeCount++
@@ -182,7 +182,10 @@ function ConvertMarkdown([string]$file,[bool]$front=$false) {
         }
         if ($line -match '^(- |\d+\. )(.+)$') {
             $prefix=if ($Matches[1] -eq '- ') {'• '} else {$Matches[1]}
-            $listExtra = if ($finalReview) { '<w:spacing w:after="0" w:line="300" w:lineRule="auto"/>' } else { '' }
+            # Keep the final REST review item with the other questions at print size.
+            $listExtra = if ($file -eq '03-restful-api.md' -and $finalReview) {
+                '<w:spacing w:after="0" w:line="280" w:lineRule="auto"/>'
+            } elseif ($finalReview) { '<w:spacing w:after="0" w:line="300" w:lineRule="auto"/>' } else { '' }
             [void]$b.Append((Para ($prefix+$Matches[2]) 'ListText' $listExtra));$i++;continue
         }
         if ($line -match '^\*\*[^*]+\*\*$') {
