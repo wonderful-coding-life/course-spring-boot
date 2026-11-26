@@ -16,6 +16,7 @@
 | 3장 | [RESTful API](03-restful-api.md) | spring-rest |
 | 4장 | [Spring MVC와 Thymeleaf](04-spring-mvc.md) | spring-thymeleaf, spring-mvc |
 | 5장 | [Spring Security](05-spring-security.md) | spring-security |
+| 6장 | [Spring AI](06-spring-ai.md) | spring-ai |
 
 ## 본 교재 장·절 연결표
 
@@ -104,7 +105,7 @@ Security는 로그인 회원 4명과 상품 2개의 전용 SQL을 사용합니�
 
 ## Word 변환을 위한 문서 규칙
 
-1장은 01 파일, 2장은 02 도입과 02-1·02-2·02-3 파일, 나머지는 03·04·05 파일 순서로 합칩니다. 이 README는 전체 안내입니다.
+1장은 01 파일, 2장은 02 도입과 02-1·02-2·02-3 파일, 나머지는 03·04·05·06 파일 순서로 합칩니다. 이 README는 전체 안내입니다.
 
 장 제목은 #, 주요 절은 ##, 실습 소절은 ###를 사용합니다. 2.1·2.2·2.3 파일은 2장의 하위 절이므로 ##로 시작합니다. 번호는 제목 텍스트에 포함되어 있습니다. Word에서 자동 번호를 추가할 경우 중복되지 않도록 한 방식만 사용합니다.
 

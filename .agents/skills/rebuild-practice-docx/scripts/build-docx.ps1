@@ -60,7 +60,7 @@ function Code([string[]]$lines,[string]$language) {
     [void]$b.Append('</w:p>')
     $b.ToString()
 }
-function Table([string[]]$rows) {
+function Table([string[]]$rows,[bool]$compact=$false) {
     $script:tableCount++
     $all = @($rows | Where-Object { $_ -notmatch '^\|?\s*:?-{3,}' } | ForEach-Object { ,@($_.Trim().Trim('|').Split('|') | ForEach-Object Trim) })
     $n = $all[0].Count
@@ -68,10 +68,12 @@ function Table([string[]]$rows) {
     if ($all[0][0] -match '실습 교재') { $widths = @(4200,5360) }
     if ($all[0][0] -eq '설정' -and $n -eq 3) { $widths = @(2700,3300,3560) }
     if ($all[0][0] -eq '이름' -and $n -eq 3) { $widths = @(1900,6160,1500) }
+    if ($all[0][0] -eq '확인할 내용' -and $n -eq 2) { $widths = @(4780,4780) }
+    $cellPadding = if ($compact) { '50' } else { '95' }
     $b=[System.Text.StringBuilder]::new()
     [void]$b.Append('<w:tbl><w:tblPr><w:tblW w:w="9560" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>')
     foreach ($edge in @('top','left','bottom','right','insideH','insideV')) { [void]$b.Append('<w:'+$edge+' w:val="single" w:sz="4" w:color="D9D9D9"/>') }
-    [void]$b.Append('</w:tblBorders><w:tblCellMar><w:top w:w="95" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="95" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>')
+    [void]$b.Append('</w:tblBorders><w:tblCellMar><w:top w:w="'+$cellPadding+'" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="'+$cellPadding+'" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>')
     foreach ($width in $widths) { [void]$b.Append('<w:gridCol w:w="'+$width+'"/>') }
     [void]$b.Append('</w:tblGrid>')
     for ($r=0;$r -lt $all.Count;$r++) {
@@ -98,7 +100,7 @@ function Picture([string]$relative,[string]$alt) {
     $img=[System.Drawing.Image]::FromFile($path)
     try { $iw=$img.Width; $ih=$img.Height } finally {$img.Dispose()}
     # Show the dependency panel at a readable print scale; preserve the full image in the package.
-    $crop = if ($relative -notmatch 'initializr') { @(0,0,$iw,$ih) } else { switch -Wildcard ($relative) {
+    $crop = if ($relative -notmatch 'initializ(r|er)') { @(0,0,$iw,$ih) } else { switch -Wildcard ($relative) {
         '*01-spring-core*' { @(1005,210,960,235) }
         '*02-1-jdbc*' { @(1005,210,960,340) }
         '*02-2-mybatis*' { @(1000,210,960,535) }
@@ -107,6 +109,7 @@ function Picture([string]$relative,[string]$alt) {
         '*thymeleaf-initializr*' { @(1000,210,960,580) }
         '*mvc-initializr*' { @(1000,220,950,1010) }
         '*05-spring-security*' { @(1005,230,970,1055) }
+        '*06-spring-ai*' { @(1180,320,1040,1190) }
         default { @(0,0,$iw,$ih) }
     } }
     $left=[int]($crop[0]/$iw*100000); $top=[int]($crop[1]/$ih*100000)
@@ -119,7 +122,7 @@ function Picture([string]$relative,[string]$alt) {
     $id=500+$script:imageCount
     $xml='<w:p><w:pPr><w:pStyle w:val="Figure"/><w:keepNext/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+$cx+'" cy="'+$cy+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="'+$id+'" name="'+$name+'" descr="'+(Esc $alt)+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="'+$id+'" name="'+$name+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+$rid+'"/><a:srcRect l="'+$left+'" t="'+$top+'" r="'+$right+'" b="'+$bottom+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+$cx+'" cy="'+$cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'
     $caption='그림 '+$script:imageCount+'. '+($alt -replace '프로젝트 생성 설정과 ','')
-    if ($relative -match 'initializr') { $caption+=' — 의존성 영역 확대' }
+    if ($relative -match 'initializ(r|er)') { $caption+=' — 의존성 영역 확대' }
     $xml+(Para $caption 'FigureCaption')
 }
 function ConvertMarkdown([string]$file,[bool]$front=$false) {
@@ -144,13 +147,14 @@ function ConvertMarkdown([string]$file,[bool]$front=$false) {
         if ($line -match '^\|') {
             $rows=[System.Collections.Generic.List[string]]::new()
             while ($i -lt $lines.Length -and $lines[$i] -match '^\|') {$rows.Add($lines[$i]);$i++}
-            [void]$b.Append((Table $rows.ToArray()));continue
+            [void]$b.Append((Table $rows.ToArray() ([bool]$compactAiStream)));continue
         }
         if ($line -match '^!\[([^\]]+)\]\(([^)]+)\)') {
             [void]$b.Append((Picture $Matches[2] $Matches[1]));$i++;continue
         }
         if ($line -match '^(#{1,3}) (.+)$') {
             $level=$Matches[1].Length; $title=$Matches[2]
+            $compactAiStream = ($file -eq '06-spring-ai.md' -and $title -match '^6\.11(?:\.| )')
             if ($front -and $title -eq 'Word 변환을 위한 문서 규칙') {break}
             if ($front -and $title -eq '목차') {
                 $i++
@@ -199,7 +203,9 @@ function ConvertMarkdown([string]$file,[bool]$front=$false) {
             $para=$para.Replace('Markdown 문서입니다.','실습 교재입니다.').Replace('캡처 이미지는 이 문서를 기준으로 `images/장별 폴더/`에 저장되어 있습니다.','캡처 이미지는 각 장의 의존성 선택 설명에서 확인합니다.').Replace('코드 블록 위의 파일 링크로 원문을 열 수 있습니다.','코드 블록 위에 원본 파일 이름과 프로젝트 안의 경로를 표시했습니다.').Replace('메서드 발췌는 링크에 표시한 기존 클래스 안의 코드입니다.','메서드 발췌는 표시한 기존 클래스 안의 코드입니다.')
         }
         $bodyStyle=if($front){'FrontBody'}else{'Normal'}
-        [void]$b.Append((Para $para $bodyStyle))
+        # Keep the final streaming walkthrough and its closing paragraph on a useful page.
+        $bodyExtra = if ($compactAiStream) { '<w:spacing w:after="80" w:line="300" w:lineRule="auto"/>' } else { '' }
+        [void]$b.Append((Para $para $bodyStyle $bodyExtra))
     }
     $b.ToString()
 }

@@ -8,7 +8,8 @@
     "02-3-jpa.md",
     "03-restful-api.md",
     "04-spring-mvc.md",
-    "05-spring-security.md"
+    "05-spring-security.md",
+    "06-spring-ai.md"
   ],
   "cover": "practice-book/distribution/올인원 스프링부트 정복_표지.docx",
   "output": "practice-book/distribution/올인원 스프링부트 정복_실습교재.docx",
