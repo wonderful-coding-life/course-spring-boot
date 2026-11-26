@@ -587,14 +587,8 @@ spring-mvc는 브라우저 입력을 DB에 반영합니다. H2 메모리 DB는 �
 ```properties
 spring.application.name=demo
 
-# 브라우저에서 /h2-console로 H2 데이터베이스를 확인한다.
 spring.h2.console.enabled=true
-
-# JPA의 테이블 자동 생성 기능을 사용하지 않는다.
 spring.jpa.hibernate.ddl-auto=none
-
-# schema.sql과 data.sql을 실행하여 테이블을 생성하고 초기 데이터를 저장한다.
-# 기본값은 embedded(내장 DB만 해당)이며, always는 외부 DB에서도 실행한다.
 spring.sql.init.mode=always
 ```
 
@@ -724,7 +718,6 @@ public String detail(@PathVariable("id") Long id, Model model) {
 
 ```java
 private Member findMember(Long id) {
-    // 조회 결과가 없으면 공통 예외 처리에서 404 화면을 표시한다.
     return memberRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("회원을 찾을 수 없습니다."));
 }
@@ -735,34 +728,30 @@ private Member findMember(Long id) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 목록</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 목록</h2>
-<table>
-    <tr>
-        <th>ID</th>
-        <th>이름</th>
-        <th>이메일</th>
-        <th>수정</th>
-    </tr>
-
-    <!-- 회원 한 명마다 한 행을 출력한다. -->
-    <tr th:each="member : ${members}">
-        <td th:text="${member.id}">1</td>
-        <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
-        <td th:text="${member.email}">SeojunYoon@campus.com</td>
-        <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
-    </tr>
-
-</table>
-<p th:if="${#lists.isEmpty(members)}">등록된 회원이 없습니다.</p>
-<p><a th:href="@{/members/new}">회원 등록하기</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 목록</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 목록</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>이름</th>
+                <th>이메일</th>
+                <th>수정</th>
+            </tr>
+            <tr th:each="member : ${members}">
+                <td th:text="${member.id}">1</td>
+                <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
+                <td th:text="${member.email}">SeojunYoon@campus.com</td>
+                <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
+            </tr>
+        </table>
+        <p th:if="${#lists.isEmpty(members)}">등록된 회원이 없습니다.</p>
+        <p><a th:href="@{/members/new}">회원 등록하기</a></p>
+    </body>
 </html>
 ```
 
@@ -771,23 +760,22 @@ private Member findMember(Long id) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 상세</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 상세</h2>
-<div th:object="${member}">
-    <p>ID: <span th:text="*{id}">1</span></p>
-    <p>이름: <span th:text="*{name}">윤서준</span></p>
-    <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
-</div>
-<p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
-<p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 상세</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 상세</h2>
+        <div th:object="${member}">
+            <p>ID: <span th:text="*{id}">1</span></p>
+            <p>이름: <span th:text="*{name}">윤서준</span></p>
+            <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
+        </div>
+        <p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
+        <p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>
 ```
 
@@ -799,7 +787,7 @@ HomeController의 `@GetMapping("/")`는 홈 요청을 처리합니다. `return "
 
 findMember()는 회원을 조회하고, 찾지 못하면 조회 대상이 없음을 나타내는 NoSuchElementException을 발생시킵니다. 뒤에서 작성하는 공통 오류 처리기가 이 예외를 404 응답으로 바꾸어 안내 화면을 보여 줍니다.
 
-상세 화면의 th:object는 member를 선택하고 *{name} 등으로 값을 출력합니다. 메뉴와 하단은 common.html의 공통 화면 조각을 사용합니다.
+상세 화면의 th:object는 member를 선택하고 *{name} 등으로 값을 출력합니다. 메뉴는 common.html의 header 화면 조각을 사용합니다.
 
 **실행과 예상 결과**
 
@@ -821,7 +809,6 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-// 클래스명과 테이블명이 다르면 @Table(name), 필드명과 컬럼명이 다르면 @Column(name)으로 매핑한다.
 @Entity
 @Table(name = "member")
 @Data
@@ -835,7 +822,6 @@ public class Member {
     private Long id;
     @Column(name = "name")
     private String name;
-    // 이메일의 NOT NULL, UNIQUE 제약은 resources/schema.sql에서 정의한다.
     @Column(name = "email")
     private String email;
     @Column(name = "password")
@@ -853,7 +839,6 @@ public String addForm() {
 
 @PostMapping("/members")
 public String add(Member member) {
-    // 신규 회원의 ID는 DB가 부여하도록 비운다.
     member.setId(null);
     memberRepository.save(member);
     return "redirect:/members";
@@ -865,31 +850,30 @@ public String add(Member member) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 등록</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 등록</h2>
-<form th:action="@{/members}" method="post">
-    <p>
-        <label for="name">이름</label>
-        <input type="text" id="name" name="name">
-    </p>
-    <p>
-        <label for="email">이메일</label>
-        <input type="text" id="email" name="email">
-    </p>
-    <p>
-        <label for="password">비밀번호</label>
-        <input type="text" id="password" name="password">
-    </p>
-    <button type="submit">등록하기</button>
-</form>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 등록</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 등록</h2>
+        <form th:action="@{/members}" method="post">
+            <p>
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name">
+            </p>
+            <p>
+                <label for="email">이메일</label>
+                <input type="text" id="email" name="email">
+            </p>
+            <p>
+                <label for="password">비밀번호</label>
+                <input type="text" id="password" name="password">
+            </p>
+            <button type="submit">등록하기</button>
+        </form>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>
 ```
 
@@ -922,7 +906,6 @@ public String editForm(@RequestParam("id") Long id, Model model) {
 
 @PostMapping("/members/edit")
 public String edit(Member member) {
-    // hidden으로 전달된 ID와 입력값을 담은 엔티티를 저장한다.
     memberRepository.save(member);
     return "redirect:/members";
 }
@@ -933,32 +916,31 @@ public String edit(Member member) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 수정</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 수정</h2>
-<form th:action="@{/members/edit}" method="post">
-    <input type="hidden" name="id" th:value="${member.id}">
-    <p>
-        <label for="name">이름</label>
-        <input type="text" id="name" name="name" th:value="${member.name}">
-    </p>
-    <p>
-        <label for="email">이메일</label>
-        <input type="text" id="email" name="email" th:value="${member.email}">
-    </p>
-    <p>
-        <label for="password">비밀번호</label>
-        <input type="text" id="password" name="password" th:value="${member.password}">
-    </p>
-    <button type="submit">저장하기</button>
-</form>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 수정</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 수정</h2>
+        <form th:action="@{/members/edit}" method="post">
+            <input type="hidden" name="id" th:value="${member.id}">
+            <p>
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name" th:value="${member.name}">
+            </p>
+            <p>
+                <label for="email">이메일</label>
+                <input type="text" id="email" name="email" th:value="${member.email}">
+            </p>
+            <p>
+                <label for="password">비밀번호</label>
+                <input type="text" id="password" name="password" th:value="${member.password}">
+            </p>
+            <button type="submit">저장하기</button>
+        </form>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>
 ```
 
@@ -1022,7 +1004,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-// 회원가입의 입력값과 검증 규칙을 모으며, 확인용 비밀번호는 저장하지 않는다.
 @Data
 public class MemberForm {
     @NotBlank(message = "이름을 입력하세요.")
@@ -1061,6 +1042,8 @@ public String signupForm(@ModelAttribute("memberForm") MemberForm memberForm) {
 public String signup(@Valid @ModelAttribute("memberForm") MemberForm memberForm,
                      BindingResult bindingResult) {
     // @Valid가 폼의 규칙을 검사한다. BindingResult는 폼 바로 뒤에 둔다.
+
+    // 입력된 패스워드 두개가 서로 일치하는지 확인한다
     if (!bindingResult.hasFieldErrors("password")
             && !bindingResult.hasFieldErrors("passwordConfirm")
             && !Objects.equals(memberForm.getPassword(), memberForm.getPasswordConfirm())) {
@@ -1075,7 +1058,6 @@ public String signup(@Valid @ModelAttribute("memberForm") MemberForm memberForm,
         return "signup";
     }
 
-    // 확인 값은 저장하지 않는다. 해시 저장은 Spring Security 실습에서 적용한다.
     Member member = Member.builder()
             .name(memberForm.getName())
             .email(memberForm.getEmail())
@@ -1105,45 +1087,44 @@ rejectValue()의 첫 번째 인수는 오류를 표시할 필드 이름, 두 번
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원가입</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원가입</h2>
-<p>정혁 / JungHyuk@campus.com / password123으로 가입해 보세요.</p>
-<!-- novalidate로 브라우저 검증을 끄고 서버의 오류 메시지를 확인한다. -->
-<form th:action="@{/signup}" th:object="${memberForm}" method="post" novalidate>
-    <p>
-        <label for="name">이름</label>
-        <input type="text" th:field="*{name}">
-        <span th:errors="*{name}"></span>
-    </p>
-    <p>
-        <label for="email">이메일</label>
-        <input type="email" th:field="*{email}">
-        <span th:errors="*{email}"></span>
-    </p>
-    <p>
-        <label for="password">비밀번호</label>
-        <input type="password" id="password" name="password" autocomplete="new-password">
-        <span th:errors="*{password}"></span>
-    </p>
-    <p>
-        <label for="passwordConfirm">비밀번호 확인</label>
-        <input type="password" id="passwordConfirm" name="passwordConfirm" autocomplete="new-password">
-        <span th:errors="*{passwordConfirm}"></span>
-    </p>
-    <button type="submit">가입하기</button>
-</form>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원가입</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원가입</h2>
+        <form th:action="@{/signup}" th:object="${memberForm}" method="post">
+            <p>
+                <label for="name">이름</label>
+                <input type="text" th:field="*{name}">
+                <span th:errors="*{name}"></span>
+            </p>
+            <p>
+                <label for="email">이메일</label>
+                <input type="text" th:field="*{email}">
+                <span th:errors="*{email}"></span>
+            </p>
+            <p>
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" name="password">
+                <span th:errors="*{password}"></span>
+            </p>
+            <p>
+                <label for="passwordConfirm">비밀번호 확인</label>
+                <input type="password" id="passwordConfirm" name="passwordConfirm">
+                <span th:errors="*{passwordConfirm}"></span>
+            </p>
+            <button type="submit">가입하기</button>
+        </form>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>
 ```
 
-th:object는 memberForm을 선택하고, 이름·이메일의 th:field는 입력값을 폼 속성과 연결합니다. th:errors는 필드별 오류를 표시합니다. novalidate는 브라우저의 내장 검증을 끄고 서버가 만든 메시지를 확인하기 위한 속성입니다.
+th:object는 memberForm을 선택하고, 이름·이메일의 th:field는 입력값을 폼 속성과 연결합니다. th:errors는 필드별 오류를 표시합니다.
+
+이메일 입력란은 type="text"로 작성하여 브라우저가 이메일 형식을 검사하지 않도록 합니다. 형식이 잘못된 값도 서버로 전송되므로, MemberForm의 @Email 검증과 th:errors로 표시하는 오류 메시지를 확인할 수 있습니다.
 
 오류가 있으면 같은 화면을 반환하여 이름·이메일과 오류 정보를 유지합니다. 비밀번호 입력란은 일반 name 속성으로 전송하고 value를 채우지 않으므로 화면을 다시 표시할 때 비어 있으며, 두 값을 다시 입력해야 합니다.
 
@@ -1187,7 +1168,6 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-// 화면에서 사용할 게시글 정보만 담는다. 작성자는 이름으로 제공한다.
 @Getter
 @Builder
 public class ArticleResponse {
@@ -1222,12 +1202,10 @@ public class ArticleService {
 
     public Page<ArticleResponse> findAll(Pageable pageable) {
         Page<Article> page = articleRepository.findAll(pageable);
-        // 각 게시글을 DTO로 바꾸고, 전체 개수와 페이지 정보는 유지한다.
         return page.map(this::toResponse);
     }
 
     public ArticleResponse findById(Long id) {
-        // 조회 결과가 없으면 공통 예외 처리에서 404 화면을 표시한다.
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("게시글을 찾을 수 없습니다."));
         return toResponse(article);
@@ -1270,7 +1248,6 @@ writerName에는 Article의 Member에서 꺼낸 이름이 들어갑니다. 화�
 @GetMapping("/articles")
 public String list(@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC)
                    Pageable pageable, Model model) {
-    // /articles?page=0처럼 조회하며, 페이지 번호는 0부터 시작한다.
     model.addAttribute("page", articleService.findAll(pageable));
     return "article-list";
 }
@@ -1291,37 +1268,31 @@ public String detail(@PathVariable("id") Long id, Model model) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>게시글 목록</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>게시글 목록</h2>
-<!-- 전체 게시글 개수와 현재 페이지를 확인한다. -->
-<p th:text="|전체 ${page.totalElements}개 · 현재 ${page.number + 1} / ${page.totalPages}페이지|">전체 100개</p>
-<table>
-    <tr>
-        <th>ID</th>
-        <th>제목</th>
-        <th>작성자</th>
-        <th>작성일</th>
-    </tr>
-
-    <!-- page.content에는 현재 페이지의 게시글만 들어 있다. -->
-    <tr th:each="article : ${page.content}">
-        <td th:text="${article.id}">1</td>
-        <td><a th:href="@{/articles/{id}(id=${article.id})}" th:text="${article.title}">제주도 푸른 바다</a></td>
-        <td th:text="${article.writerName}">윤서준</td>
-        <td th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</td>
-    </tr>
-
-</table>
-<p th:if="${page.empty}">게시글이 없습니다.</p>
-<!-- 공통 페이징에 페이지 정보와 게시글 목록 주소를 전달한다. -->
-<div th:replace="~{common :: pagination(${page}, '/articles')}"></div>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>게시글 목록</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>게시글 목록</h2>
+        <p th:text="|전체 ${page.totalElements}개 · 현재 ${page.number + 1} / ${page.totalPages}페이지|">전체 100개</p>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>제목</th>
+                <th>작성자</th>
+                <th>작성일</th>
+            </tr>
+            <tr th:each="article : ${page.content}">
+                <td th:text="${article.id}">1</td>
+                <td><a th:href="@{/articles/{id}(id=${article.id})}" th:text="${article.title}">제주도 푸른 바다</a></td>
+                <td th:text="${article.writerName}">윤서준</td>
+                <td th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</td>
+            </tr>
+        </table>
+        <p th:if="${page.empty}">게시글이 없습니다.</p>
+        <div th:replace="~{common :: pagination(${page}, '/articles')}"></div>
+    </body>
 </html>
 ```
 
@@ -1330,22 +1301,20 @@ public String detail(@PathVariable("id") Long id, Model model) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>게시글 상세</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>게시글 상세</h2>
-<h3 th:text="${article.title}">제주도 푸른 바다</h3>
-<p th:text="|작성자: ${article.writerName}|">작성자: 윤서준</p>
-<p>작성일: <span th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
-<p>수정일: <span th:text="${#temporals.format(article.updated, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
-<!-- th:text로 본문을 일반 텍스트로 출력한다. -->
-<p th:text="${article.description}">협재 해변에서 맑은 바다를 보며 여유를 즐겼다.</p>
-<p><a th:href="@{/articles}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>게시글 상세</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>게시글 상세</h2>
+        <h3 th:text="${article.title}">제주도 푸른 바다</h3>
+        <p th:text="|작성자: ${article.writerName}|">작성자: 윤서준</p>
+        <p>작성일: <span th:text="${#temporals.format(article.created, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
+        <p>수정일: <span th:text="${#temporals.format(article.updated, 'yyyy-MM-dd HH:mm')}">2026-11-22 09:30</span></p>
+        <p th:text="${article.description}">협재 해변에서 맑은 바다를 보며 여유를 즐겼다.</p>
+        <p><a th:href="@{/articles}">목록으로</a></p>
+    </body>
 </html>
 ```
 
@@ -1379,36 +1348,31 @@ public String detail(@PathVariable("id") Long id, Model model) {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>공통 화면</title></head>
-<body>
-<!-- 이름을 붙인 화면 조각을 각 화면에서 th:replace로 재사용한다. -->
-<div th:fragment="header">
-    <h1>Spring MVC 실습</h1>
-    <div>
-        <a th:href="@{/members}">회원 목록</a>
-        <a th:href="@{/members/new}">회원 등록</a>
-        <a th:href="@{/signup}">회원가입</a>
-        <a th:href="@{/articles}">게시글 목록</a>
-    </div>
-    <hr>
-</div>
-<!-- page는 페이지 정보, baseUrl은 목록을 조회할 주소이다. -->
-<div th:fragment="pagination(page, baseUrl)" th:if="${page.totalPages > 0}">
-    <!-- 첫 페이지에는 이전 링크, 마지막 페이지에는 다음 링크를 표시하지 않는다. -->
-    <a th:if="${!page.first}" th:href="@{${baseUrl}(page=${page.number - 1}, size=${page.size})}">이전</a>
-    <!-- 서버의 페이지 번호는 0부터 시작하지만 화면에는 1을 더해 표시한다. -->
-    <span th:each="number : ${#numbers.sequence(0, page.totalPages - 1)}">
-        <strong th:if="${number == page.number}" th:text="${number + 1}">1</strong>
-        <a th:unless="${number == page.number}"
-           th:href="@{${baseUrl}(page=${number}, size=${page.size})}" th:text="${number + 1}">2</a>
-    </span>
-    <a th:if="${!page.last}" th:href="@{${baseUrl}(page=${page.number + 1}, size=${page.size})}">다음</a>
-</div>
-<div th:fragment="footer">
-    <hr>
-    <p>H2 메모리 DB를 사용합니다. 앱을 다시 실행하면 샘플 데이터로 시작합니다.</p>
-</div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>공통 화면</title>
+    </head>
+    <body>
+        <div th:fragment="header">
+            <h1>Spring MVC 실습</h1>
+            <div>
+                <a th:href="@{/members}">회원 목록</a>
+                <a th:href="@{/members/new}">회원 등록</a>
+                <a th:href="@{/signup}">회원가입</a>
+                <a th:href="@{/articles}">게시글 목록</a>
+            </div>
+            <hr>
+        </div>
+        <div th:fragment="pagination(page, baseUrl)" th:if="${page.totalPages > 0}">
+            <a th:if="${!page.first}" th:href="@{${baseUrl}(page=${page.number - 1}, size=${page.size})}">이전</a>
+            <span th:each="number : ${#numbers.sequence(0, page.totalPages - 1)}">
+                <strong th:if="${number == page.number}" th:text="${number + 1}">1</strong>
+                <a th:unless="${number == page.number}"
+                    th:href="@{${baseUrl}(page=${number}, size=${page.size})}" th:text="${number + 1}">2</a>
+            </span>
+            <a th:if="${!page.last}" th:href="@{${baseUrl}(page=${page.number + 1}, size=${page.size})}">다음</a>
+        </div>
+    </body>
 </html>
 ```
 
@@ -1441,7 +1405,6 @@ public String detail(@PathVariable("id") Long id, Model model) {
 ```java
 package com.example.demo.controller;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
@@ -1453,15 +1416,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 
-// 여러 Controller에서 발생한 예외를 한곳에서 처리한다.
 @ControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String handleBadRequest(Model model) {
-        // /members/abc처럼 숫자인 ID에 문자를 보내면 400으로 응답한다.
         model.addAttribute("status", 400);
         model.addAttribute("message", "회원 ID 등 숫자로 입력해야 하는 값을 확인하세요.");
         return "error";
@@ -1470,8 +1430,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoSuchElementException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public String handleNotFound(NoSuchElementException ex, Model model) {
-        // @ResponseStatus는 실제 HTTP 응답을 404로 설정한다.
-        // Model의 status와 message는 오류 화면에 표시할 값이다.
         model.addAttribute("status", 404);
         model.addAttribute("message", ex.getMessage());
         return "error";
@@ -1480,7 +1438,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public String handleResourceNotFound(Model model) {
-        // 정적 파일 누락은 서버 오류가 아니므로 404로 응답하고 오류 로그를 남기지 않는다.
         model.addAttribute("status", 404);
         model.addAttribute("message", "요청한 파일을 찾을 수 없습니다.");
         return "error";
@@ -1489,8 +1446,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public String handleConflict(DataIntegrityViolationException ex, Model model) {
-        // 중복 이메일 등 DB 제약 위반은 409로 응답한다. 상세 원인은 로그에 남긴다.
-        log.error("데이터 제약 위반으로 요청을 처리하지 못했습니다.", ex);
         model.addAttribute("status", 409);
         model.addAttribute("message", "데이터 제약으로 요청을 처리할 수 없습니다. 중복 이메일 등을 확인하세요.");
         return "error";
@@ -1499,8 +1454,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public String handleException(Exception ex, Model model) {
-        // 예상하지 못한 오류는 자세한 내용을 로그에 남기고 공통 안내를 표시한다.
-        log.error("요청 처리 중 예상하지 못한 오류가 발생했습니다.", ex);
         model.addAttribute("status", 500);
         model.addAttribute("message", "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         return "error";
@@ -1513,19 +1466,17 @@ public class GlobalExceptionHandler {
 ```html
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>오류 안내</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>요청을 처리할 수 없습니다.</h2>
-<!-- 공통 예외 처리에서 전달한 상태 코드와 안내 메시지를 표시한다. -->
-<p>상태 코드: <span th:text="${status}">500</span></p>
-<p th:text="${message}">처리 중 오류가 발생했습니다.</p>
-<p><a th:href="@{/members}">회원 목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>오류 안내</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>요청을 처리할 수 없습니다.</h2>
+        <p>상태 코드: <span th:text="${status}">500</span></p>
+        <p th:text="${message}">처리 중 오류가 발생했습니다.</p>
+        <p><a th:href="@{/members}">회원 목록으로</a></p>
+    </body>
 </html>
 ```
 
@@ -1533,17 +1484,21 @@ public class GlobalExceptionHandler {
 
 숫자로 받을 ID에 문자가 들어오는 등 요청값을 필요한 자료형으로 바꾸지 못하면 MethodArgumentTypeMismatchException이 발생하며, 여기서는 400으로 응답합니다. 조회 대상이 없을 때의 NoSuchElementException은 404로, DB 제약 위반인 DataIntegrityViolationException은 409로 처리합니다.
 
-이미지나 아이콘 같은 정적 파일을 찾지 못하면 NoResourceFoundException이 발생합니다. 이 예외는 전용 메서드에서 404로 처리하며, 오류 로그를 남기지 않습니다. 여러 처리 메서드가 같은 예외를 받을 수 있으면 더 구체적인 예외 타입을 지정한 메서드가 선택되므로, 정적 파일 누락은 Exception을 받는 메서드로 전달되지 않습니다.
+오류 화면의 message는 예외 메시지가 사용자 안내용으로 작성되었는지에 따라 정합니다. 이 예제에서 회원이나 게시글을 찾지 못하면 조회 코드가 NoSuchElementException에 각각 “회원을 찾을 수 없습니다.” 또는 “게시글을 찾을 수 없습니다.”를 지정하므로, 처리기에서는 ex.getMessage()로 그 문구를 사용합니다.
+
+숫자 변환 실패, 정적 파일 누락, DB 제약 위반처럼 프레임워크나 DB에서 발생한 예외는 메시지에 내부 클래스명·파일 경로·SQL 등의 기술 정보가 포함될 수 있습니다. 이러한 예외와 예상하지 못한 오류에는 처리기에서 사용자용 문구를 직접 지정하여, 화면에 필요한 안내만 전달합니다.
+
+이미지나 아이콘 같은 정적 파일을 찾지 못하면 NoResourceFoundException이 발생합니다. 이 예외는 전용 메서드에서 404로 처리합니다. 여러 처리 메서드가 같은 예외를 받을 수 있으면 더 구체적인 예외 타입을 지정한 메서드가 선택되므로, 정적 파일 누락은 Exception을 받는 메서드로 전달되지 않습니다.
 
 브라우저는 탭 아이콘을 표시하기 위해 /favicon.ico를 요청할 수 있습니다. 프로젝트에는 스프링 부트를 잎과 전원 기호로 표현한 아이콘을 src/main/resources/static/favicon.ico에 두었으며, 이 위치의 정적 파일은 /favicon.ico로 제공됩니다.
 
-그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, log.error("문구", ex)로 안내 문구와 예외의 상세 내용을 로그에 기록합니다. 사용자 화면에는 정해진 메시지만 표시하며, 회원가입의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
+그 밖에 이 처리기로 전달되는 Exception은 500으로 처리하고, 사용자 화면에는 정해진 안내 문구를 표시합니다. 회원가입의 BindingResult 오류는 이 처리기를 거치지 않고 원래 입력 화면에서 안내합니다.
 
 **실행과 예상 결과**
 
 `/members/abc`, `/articles/abc`에 접속해 숫자 변환 오류를 확인하고, 없는 숫자 ID의 회원·게시글도 조회합니다. 기본 등록에서 기존 이메일로 등록하면 409 공통 오류 화면이 표시되고, /signup에서는 입력란 옆에 중복 오류가 표시되는지 비교합니다. 브라우저 Network에서 상태 코드를 확인합니다.
 
-`/missing.png`처럼 존재하지 않는 정적 파일을 요청하면 404 오류 화면이 표시되고 서버 로그에 오류 스택이 남지 않는지 확인합니다. `/favicon.ico` 요청은 200으로 응답하며 아이콘을 반환합니다.
+`/missing.png`처럼 존재하지 않는 정적 파일을 요청하면 404 상태와 “요청한 파일을 찾을 수 없습니다.”라는 안내 문구가 표시되는지 확인합니다. `/favicon.ico` 요청은 200으로 응답하며 아이콘을 반환합니다.
 
 응답 상태와 화면에 표시된 내용은 다음 기준으로 비교합니다.
 

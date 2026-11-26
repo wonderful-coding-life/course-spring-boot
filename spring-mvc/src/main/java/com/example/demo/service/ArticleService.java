@@ -17,12 +17,10 @@ public class ArticleService {
 
     public Page<ArticleResponse> findAll(Pageable pageable) {
         Page<Article> page = articleRepository.findAll(pageable);
-        // 각 게시글을 DTO로 바꾸고, 전체 개수와 페이지 정보는 유지한다.
         return page.map(this::toResponse);
     }
 
     public ArticleResponse findById(Long id) {
-        // 조회 결과가 없으면 공통 예외 처리에서 404 화면을 표시한다.
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("게시글을 찾을 수 없습니다."));
         return toResponse(article);

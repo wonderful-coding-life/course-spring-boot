@@ -1,33 +1,28 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>공통 화면</title></head>
-<body>
-<!-- 이름을 붙인 화면 조각을 각 화면에서 th:replace로 재사용한다. -->
-<div th:fragment="header">
-    <h1>Spring MVC 실습</h1>
-    <div>
-        <a th:href="@{/members}">회원 목록</a>
-        <a th:href="@{/members/new}">회원 등록</a>
-        <a th:href="@{/signup}">회원가입</a>
-        <a th:href="@{/articles}">게시글 목록</a>
-    </div>
-    <hr>
-</div>
-<!-- page는 페이지 정보, baseUrl은 목록을 조회할 주소이다. -->
-<div th:fragment="pagination(page, baseUrl)" th:if="${page.totalPages > 0}">
-    <!-- 첫 페이지에는 이전 링크, 마지막 페이지에는 다음 링크를 표시하지 않는다. -->
-    <a th:if="${!page.first}" th:href="@{${baseUrl}(page=${page.number - 1}, size=${page.size})}">이전</a>
-    <!-- 서버의 페이지 번호는 0부터 시작하지만 화면에는 1을 더해 표시한다. -->
-    <span th:each="number : ${#numbers.sequence(0, page.totalPages - 1)}">
-        <strong th:if="${number == page.number}" th:text="${number + 1}">1</strong>
-        <a th:unless="${number == page.number}"
-           th:href="@{${baseUrl}(page=${number}, size=${page.size})}" th:text="${number + 1}">2</a>
-    </span>
-    <a th:if="${!page.last}" th:href="@{${baseUrl}(page=${page.number + 1}, size=${page.size})}">다음</a>
-</div>
-<div th:fragment="footer">
-    <hr>
-    <p>H2 메모리 DB를 사용합니다. 앱을 다시 실행하면 샘플 데이터로 시작합니다.</p>
-</div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>공통 화면</title>
+    </head>
+    <body>
+        <div th:fragment="header">
+            <h1>Spring MVC 실습</h1>
+            <div>
+                <a th:href="@{/members}">회원 목록</a>
+                <a th:href="@{/members/new}">회원 등록</a>
+                <a th:href="@{/signup}">회원가입</a>
+                <a th:href="@{/articles}">게시글 목록</a>
+            </div>
+            <hr>
+        </div>
+        <div th:fragment="pagination(page, baseUrl)" th:if="${page.totalPages > 0}">
+            <a th:if="${!page.first}" th:href="@{${baseUrl}(page=${page.number - 1}, size=${page.size})}">이전</a>
+            <span th:each="number : ${#numbers.sequence(0, page.totalPages - 1)}">
+                <strong th:if="${number == page.number}" th:text="${number + 1}">1</strong>
+                <a th:unless="${number == page.number}"
+                    th:href="@{${baseUrl}(page=${number}, size=${page.size})}" th:text="${number + 1}">2</a>
+            </span>
+            <a th:if="${!page.last}" th:href="@{${baseUrl}(page=${page.number + 1}, size=${page.size})}">다음</a>
+        </div>
+    </body>
 </html>

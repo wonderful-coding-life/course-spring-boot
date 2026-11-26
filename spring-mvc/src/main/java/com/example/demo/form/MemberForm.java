@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-// 회원가입의 입력값과 검증 규칙을 모으며, 확인용 비밀번호는 저장하지 않는다.
 @Data
 public class MemberForm {
     @NotBlank(message = "이름을 입력하세요.")

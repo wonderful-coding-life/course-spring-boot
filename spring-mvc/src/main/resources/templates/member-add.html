@@ -1,28 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 등록</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 등록</h2>
-<form th:action="@{/members}" method="post">
-    <p>
-        <label for="name">이름</label>
-        <input type="text" id="name" name="name">
-    </p>
-    <p>
-        <label for="email">이메일</label>
-        <input type="text" id="email" name="email">
-    </p>
-    <p>
-        <label for="password">비밀번호</label>
-        <input type="text" id="password" name="password">
-    </p>
-    <button type="submit">등록하기</button>
-</form>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 등록</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 등록</h2>
+        <form th:action="@{/members}" method="post">
+            <p>
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name">
+            </p>
+            <p>
+                <label for="email">이메일</label>
+                <input type="text" id="email" name="email">
+            </p>
+            <p>
+                <label for="password">비밀번호</label>
+                <input type="text" id="password" name="password">
+            </p>
+            <button type="submit">등록하기</button>
+        </form>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>

@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 상세</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 상세</h2>
-<div th:object="${member}">
-    <p>ID: <span th:text="*{id}">1</span></p>
-    <p>이름: <span th:text="*{name}">윤서준</span></p>
-    <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
-</div>
-<p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
-<p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
-<p><a th:href="@{/members}">목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 상세</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 상세</h2>
+        <div th:object="${member}">
+            <p>ID: <span th:text="*{id}">1</span></p>
+            <p>이름: <span th:text="*{name}">윤서준</span></p>
+            <p>이메일: <span th:text="*{email}">SeojunYoon@campus.com</span></p>
+        </div>
+        <p><a th:href="@{/members/edit(id=${member.id})}">수정하기</a></p>
+        <p><a th:href="@{/members/delete(id=${member.id})}">삭제하기</a></p>
+        <p><a th:href="@{/members}">목록으로</a></p>
+    </body>
 </html>

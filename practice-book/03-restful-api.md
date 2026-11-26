@@ -1440,7 +1440,7 @@ testRuntimeOnly 'com.h2database:h2'
 
 ```properties
 # Spring 테스트에서는 실행용 MariaDB 대신 메모리 H2를 사용한다.
-spring.datasource.url=jdbc:h2:mem:spring-rest-test
+spring.datasource.url=jdbc:h2:mem:test
 spring.datasource.driver-class-name=org.h2.Driver
 spring.datasource.username=sa
 spring.datasource.password=

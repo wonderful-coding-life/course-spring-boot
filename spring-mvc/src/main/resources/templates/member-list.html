@@ -1,31 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>회원 목록</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>회원 목록</h2>
-<table>
-    <tr>
-        <th>ID</th>
-        <th>이름</th>
-        <th>이메일</th>
-        <th>수정</th>
-    </tr>
-
-    <!-- 회원 한 명마다 한 행을 출력한다. -->
-    <tr th:each="member : ${members}">
-        <td th:text="${member.id}">1</td>
-        <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
-        <td th:text="${member.email}">SeojunYoon@campus.com</td>
-        <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
-    </tr>
-
-</table>
-<p th:if="${#lists.isEmpty(members)}">등록된 회원이 없습니다.</p>
-<p><a th:href="@{/members/new}">회원 등록하기</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>회원 목록</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>회원 목록</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>이름</th>
+                <th>이메일</th>
+                <th>수정</th>
+            </tr>
+            <tr th:each="member : ${members}">
+                <td th:text="${member.id}">1</td>
+                <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">윤서준</a></td>
+                <td th:text="${member.email}">SeojunYoon@campus.com</td>
+                <td><a th:href="@{/members/edit(id=${member.id})}">수정</a></td>
+            </tr>
+        </table>
+        <p th:if="${#lists.isEmpty(members)}">등록된 회원이 없습니다.</p>
+        <p><a th:href="@{/members/new}">회원 등록하기</a></p>
+    </body>
 </html>

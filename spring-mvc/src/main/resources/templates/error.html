@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>오류 안내</title>
-</head>
-<body>
-<div th:replace="~{common :: header}"></div>
-<h2>요청을 처리할 수 없습니다.</h2>
-<!-- 공통 예외 처리에서 전달한 상태 코드와 안내 메시지를 표시한다. -->
-<p>상태 코드: <span th:text="${status}">500</span></p>
-<p th:text="${message}">처리 중 오류가 발생했습니다.</p>
-<p><a th:href="@{/members}">회원 목록으로</a></p>
-<div th:replace="~{common :: footer}"></div>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>오류 안내</title>
+    </head>
+    <body>
+        <div th:replace="~{common :: header}"></div>
+        <h2>요청을 처리할 수 없습니다.</h2>
+        <p>상태 코드: <span th:text="${status}">500</span></p>
+        <p th:text="${message}">처리 중 오류가 발생했습니다.</p>
+        <p><a th:href="@{/members}">회원 목록으로</a></p>
+    </body>
 </html>
