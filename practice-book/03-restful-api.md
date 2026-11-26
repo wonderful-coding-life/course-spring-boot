@@ -192,11 +192,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 [MemberController.java — create()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// POST /members: 요청 JSON을 Member로 받아 등록하고, 201로 응답한다.
 @PostMapping
 @ResponseStatus(HttpStatus.CREATED)
 public Member create(@RequestBody Member member) {
-    // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
     member.setId(null);
     return memberRepository.save(member);
 }
@@ -232,7 +230,6 @@ URL 안의 ID는 @PathVariable로 받습니다. Repository의 결과가 없으�
 [MemberController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members: 전체 회원을 조회한다.
 @GetMapping
 public List<Member> findAll() {
     return memberRepository.findAll();
@@ -242,9 +239,18 @@ public List<Member> findAll() {
 [MemberController.java — findById()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members/회원ID: URL의 ID로 회원을 조회한다. 없으면 404로 응답한다.
 @GetMapping("/{id}")
 public Member findById(@PathVariable("id") Long id) {
+    return findMember(id);
+}
+```
+
+단건 조회뿐 아니라 수정과 삭제에서도 회원을 먼저 찾아야 합니다. 회원 조회와 회원이 없을 때의 예외 처리를 함께 사용할 수 있도록, 다음 findMember()를 MemberController 클래스의 마지막 닫는 중괄호 앞에 추가합니다.
+
+[MemberController.java — findMember()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
+
+```java
+private Member findMember(Long id) {
     return memberRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
 }
@@ -268,7 +274,9 @@ Accept: application/json
 
 **코드 설명**
 
-orElseThrow()는 Optional에 회원이 있으면 꺼내고, 없으면 예외를 발생시킵니다. `() -> new ResponseStatusException(...)`은 회원을 찾지 못했을 때 만들 예외를 지정하는 람다 표현식입니다. 람다는 실행할 동작을 값처럼 전달하는 자바 문법이며, 여기서는 예외를 만드는 동작을 orElseThrow()에 전달합니다.
+findById()는 공통 메서드 findMember()를 호출하여 회원을 반환합니다. findMember()는 클래스 내부에서만 사용하므로 private으로 선언하며, 뒤에서 작성할 전체 수정·부분 수정·삭제 메서드에서도 호출합니다.
+
+findMember() 안의 orElseThrow()는 Optional에 회원이 있으면 꺼내고, 없으면 예외를 발생시킵니다. `() -> new ResponseStatusException(...)`은 회원을 찾지 못했을 때 만들 예외를 지정하는 람다 표현식입니다. 람다는 실행할 동작을 값처럼 전달하는 자바 문법이며, 여기서는 예외를 만드는 동작을 orElseThrow()에 전달합니다.
 
 @GetMapping에 주소가 없으면 공통 주소 /members를 사용합니다. `/{id}`가 있으면 /members/실제ID입니다. 전체 조회는 List를 JSON 배열로, 단건 조회는 Member를 JSON 객체로 변환합니다.
 
@@ -291,11 +299,9 @@ PUT 예제는 이름·이메일·나이를 모두 받아 기존 회원 정보를
 [MemberController.java — update()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// PUT /members/회원ID: 기존 회원의 이름, 이메일, 나이를 요청 내용으로 변경한다.
 @PutMapping("/{id}")
 public Member update(@PathVariable("id") Long id, @RequestBody Member member) {
-    Member found = memberRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+    Member found = findMember(id);
 
     found.setName(member.getName());
     found.setEmail(member.getEmail());
@@ -322,7 +328,9 @@ Accept: application/json
 
 **코드 설명**
 
-URL ID가 수정 대상을 결정합니다. 조회한 객체에 요청 값을 복사하고 save()합니다. JSON의 ID로 수정 대상을 바꾸는 구조가 아닙니다. 여기서는 별도 DTO 검증 없이 세 필드를 모두 전달하는 실습 규칙을 따릅니다.
+URL의 ID가 수정 대상을 결정하며, findMember(id)로 해당 회원을 조회합니다. 조회한 객체에 요청 값을 복사하고 save()합니다.
+
+JSON의 ID로 수정 대상을 바꾸는 구조가 아닙니다. 여기서는 별도 DTO 검증 없이 세 필드를 모두 전달하는 실습 규칙을 따릅니다.
 
 **실행과 예상 결과**
 
@@ -339,13 +347,10 @@ URL ID가 수정 대상을 결정합니다. 조회한 객체에 요청 값을 �
 [MemberController.java — patch()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// PATCH /members/회원ID: 이름, 이메일, 나이 중 전달한 값만 수정한다.
 @PatchMapping("/{id}")
 public Member patch(@PathVariable("id") Long id, @RequestBody Member member) {
-    Member found = memberRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+    Member found = findMember(id);
 
-    // 이 예제에서는 생략하거나 null로 보낸 필드는 기존 값을 유지한다.
     if (member.getName() != null) {
         found.setName(member.getName());
     }
@@ -375,7 +380,7 @@ Accept: application/json
 
 **코드 설명**
 
-각 값이 null이 아닐 때만 기존 객체에 적용합니다. JSON에서 생략한 값과 명시적으로 null로 보낸 값을 이 예제는 구별하지 않습니다. 따라서 이 메서드로 값을 null로 지우는 기능은 제공하지 않습니다.
+findMember(id)로 조회한 회원에 각 값이 null이 아닐 때만 적용합니다. JSON에서 생략한 값과 명시적으로 null로 보낸 값을 이 예제는 구별하지 않습니다. 따라서 이 메서드로 값을 null로 지우는 기능은 제공하지 않습니다.
 
 **실행과 예상 결과**
 
@@ -392,12 +397,10 @@ Accept: application/json
 [MemberController.java — delete()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// DELETE /members/회원ID: 회원을 삭제하고, 본문 없이 204로 응답한다.
 @DeleteMapping("/{id}")
 @ResponseStatus(HttpStatus.NO_CONTENT)
 public void delete(@PathVariable("id") Long id) {
-    Member member = memberRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
+    Member member = findMember(id);
     memberRepository.delete(member);
 }
 ```
@@ -421,7 +424,9 @@ Accept: application/json
 
 **코드 설명**
 
-@DeleteMapping은 DELETE 요청을 처리하고, NO_CONTENT는 204를 지정합니다. 이 실습에서는 작성한 게시글이 없는 새 회원을 삭제합니다. 기존 작성자 삭제는 외래 키 제약으로 실패할 수 있습니다.
+@DeleteMapping은 DELETE 요청을 처리하고, NO_CONTENT는 204를 지정합니다. findMember(id)로 회원을 조회한 뒤 delete()에 전달하며, 회원이 없으면 공통 메서드에서 예외가 발생하여 404로 응답합니다.
+
+이 실습에서는 작성한 게시글이 없는 새 회원을 삭제합니다. 기존 작성자 삭제는 외래 키 제약으로 실패할 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -440,11 +445,8 @@ members.http의 삭제와 삭제 후 조회를 순서대로 실행합니다.
 [MemberController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// GET /members?name=이름: 이름이 없으면 전체 회원을, 있으면 이름이 일치하는 회원을 조회한다.
 @GetMapping
-public List<Member> findAll(
-        @RequestParam(name = "name", required = false) String name) {
-    // 생략한 값은 null이며, 빈 문자열이나 공백도 검색 조건이 없는 것으로 처리한다.
+public List<Member> findAll(@RequestParam(name = "name", required = false) String name) {
     if (name == null || name.isBlank()) {
         return memberRepository.findAll();
     }
@@ -638,7 +640,6 @@ public class Member {
 @PostMapping("/valid")
 @ResponseStatus(HttpStatus.CREATED)
 public Member createValid(@Valid @RequestBody Member member) {
-    // 신규 등록의 ID는 DB가 생성한다. 요청에 ID가 있어도 사용하지 않는다.
     member.setId(null);
     return memberRepository.save(member);
 }
@@ -1197,7 +1198,6 @@ MemberService의 일괄 가입 메서드에만 트랜잭션을 적용합니다. 
 [MemberController.java — registerAll()](../spring-rest/src/main/java/com/example/demo/controller/MemberController.java)
 
 ```java
-// POST /members/batch: 한 번에 가입 처리하고 생성된 ID가 포함된 회원 목록을 반환한다.
 @PostMapping("/batch")
 @ResponseStatus(HttpStatus.CREATED)
 public List<Member> registerAll(@RequestBody List<Member> members) {
