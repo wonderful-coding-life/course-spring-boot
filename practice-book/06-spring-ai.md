@@ -22,14 +22,14 @@
 
 ![Spring AI 프로젝트 생성 설정과 웹·JPA·MariaDB·AI 의존성 선택](images/06-spring-ai/spring-ai-spring-initializer.png)
 
-캡처에는 기존 JDBC Chat Memory Repository가 표시되어 있지만, 이 장은 Spring AI 2.1의 Session API를 사용합니다. 해당 의존성 대신 `spring-ai-starter-model-session-jdbc`를 적용하고, Lombok과 벡터 검색용 Advisor 의존성도 다음 설정에서 확인합니다.
+캡처와 같이 `JDBC AI Session Repository`를 선택하여 Spring AI의 Session API로 대화 이력을 DB에 저장합니다. 이 항목에 해당하는 의존성은 `spring-ai-starter-model-session-jdbc`이며, Lombok과 벡터 검색용 Advisor 의존성도 다음 설정에서 확인합니다.
 
 | 의존성 | 실습에서 하는 일 |
 |---|---|
 | Spring Web | HTTP 요청을 받아 채팅·문서 검색 결과를 응답합니다. |
 | Spring Data JPA, MariaDB Driver | 주문 데이터를 조회하고 취소할 주문을 삭제합니다. |
 | OpenAI | 채팅 모델과 임베딩 모델을 연결합니다. |
-| JDBC Session | 대화 이력을 MariaDB에 저장합니다. |
+| JDBC AI Session Repository | Session API의 대화 이력을 MariaDB에 저장합니다. |
 | MariaDB Vector Store | 문서와 벡터를 저장하고 유사한 문서를 검색합니다. |
 | PDF·Markdown Document Reader | 업로드한 파일에서 텍스트를 읽습니다. |
 | Vector Store Advisor | 검색한 문서를 모델 요청에 함께 전달합니다. |
@@ -150,6 +150,8 @@ IntelliJ IDEA에서 임시 HTTP 요청 파일을 만들고, 각 절의 `http` �
 
 모델을 호출하는 가장 작은 예제부터 확인합니다. `ChatModel`은 질문을 모델에 전달하고 응답을 받는 인터페이스이며, OpenAI 의존성과 설정을 바탕으로 스프링이 구현 객체를 준비합니다.
 
+`ChatModel`은 모델과 직접 요청·응답을 주고받는 **저수준 API(Low Level API)**입니다. 여기서 저수준은 모델 호출의 기본 동작을 직접 다룬다는 뜻이며, 이 예제에서는 `call(message)`로 질문을 전달하고 답변을 받습니다.
+
 **관련 코드**: `controller/ApiController.java`에서 이번 실습에 필요한 패키지·import·클래스 선언, 주입 필드와 `postChatModel`을 발췌한 코드입니다.
 
 ```java
@@ -192,6 +194,8 @@ Content-Type: text/plain; charset=UTF-8
 ## 6.2 ChatClient.Builder로 요청 구성하기
 
 질문뿐 아니라 역할, 옵션, 대화 이력과 도구를 함께 다루려면 요청을 단계별로 구성하는 방식이 편리합니다. `ChatClient`는 이러한 설정을 이어 붙여 모델을 호출하고, 필요한 응답 형태를 선택할 수 있게 합니다.
+
+`ChatClient`는 `ChatModel`을 바탕으로 요청 구성과 응답 처리를 편리하게 제공하는 **고수준 API(High Level API)**입니다. 여기서 고수준은 모델 호출에 필요한 작업을 더 간편하게 조합할 수 있다는 뜻이며, `prompt().user(message).call().content()`처럼 메서드를 연결하여 사용합니다. 이후 실습에서는 이 요청 구성에 대화 이력, 문서 검색과 도구를 차례로 연결합니다.
 
 **관련 코드**: `controller/ApiController.java`의 `builder` 필드와 `postChatClient`입니다.
 

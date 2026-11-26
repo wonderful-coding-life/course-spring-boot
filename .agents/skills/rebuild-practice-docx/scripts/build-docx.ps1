@@ -109,7 +109,7 @@ function Picture([string]$relative,[string]$alt) {
         '*thymeleaf-initializr*' { @(1000,210,960,580) }
         '*mvc-initializr*' { @(1000,220,950,1010) }
         '*05-spring-security*' { @(1005,230,970,1055) }
-        '*06-spring-ai*' { @(1180,320,1040,1190) }
+        '*06-spring-ai*' { @(980,28,890,1020) }
         default { @(0,0,$iw,$ih) }
     } }
     $left=[int]($crop[0]/$iw*100000); $top=[int]($crop[1]/$ih*100000)
