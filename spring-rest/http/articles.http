@@ -13,13 +13,12 @@ Accept: application/json
 %}
 
 ### 2. 게시글 등록 (201 Created)
-# 회원 객체 전체 대신 작성자 ID와 제목, 본문을 보낸다.
-POST {{baseUrl}}/articles
+# 작성자 ID는 요청 파라미터로, 제목과 본문은 JSON으로 보낸다.
+POST {{baseUrl}}/articles?memberId={{articleMemberId}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "memberId": {{articleMemberId}},
   "title": "토요일 오전에 같이 산책하실 분",
   "description": "오전 열 시에 공원 입구에서 만나요. 한 바퀴 걷고 차도 마시면 좋겠습니다."
 }

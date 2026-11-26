@@ -1,8 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.ArticleCreateRequest;
 import com.example.demo.dto.ArticleResponse;
-import com.example.demo.dto.ArticleUpdateRequest;
+import com.example.demo.dto.ArticleRequest;
 import com.example.demo.entity.Article;
 import com.example.demo.entity.Member;
 import com.example.demo.repository.ArticleRepository;
@@ -14,16 +13,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-// 회원 조회, 게시글 처리, DTO 변환을 담당한다.
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
     private final ArticleRepository articleRepository;
     private final MemberRepository memberRepository;
 
-    public ArticleResponse create(ArticleCreateRequest request) {
-        // 요청의 회원 ID로 실제 작성자를 찾아 게시글과 연결한다.
-        Member member = memberRepository.findById(request.getMemberId())
+    public ArticleResponse create(Long memberId, ArticleRequest request) {
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "작성자를 찾을 수 없습니다."));
 
         Article article = Article.builder()
@@ -36,8 +33,7 @@ public class ArticleService {
     }
 
     public ArticleResponse findById(Long id) {
-        Article article = articleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+        Article article = findArticle(id);
         return toResponse(article);
     }
 
@@ -49,9 +45,8 @@ public class ArticleService {
         return page.map(this::toResponse);
     }
 
-    public ArticleResponse update(Long id, ArticleUpdateRequest request) {
-        Article article = articleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+    public ArticleResponse update(Long id, ArticleRequest request) {
+        Article article = findArticle(id);
 
         article.setTitle(request.getTitle());
         article.setDescription(request.getDescription());
@@ -61,9 +56,13 @@ public class ArticleService {
     }
 
     public void delete(Long id) {
-        Article article = articleRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+        Article article = findArticle(id);
         articleRepository.delete(article);
+    }
+
+    private Article findArticle(Long id) {
+        return articleRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
     }
 
     private ArticleResponse toResponse(Article article) {

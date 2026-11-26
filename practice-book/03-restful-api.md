@@ -173,15 +173,17 @@ package com.example.demo.repository;
 
 import com.example.demo.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-// 기본 CRUD는 JpaRepository의 findAll, findById, save, delete를 그대로 사용한다.
+@Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
-    // 이름이 일치하는 회원을 조회한다. 동명이인이 있을 수 있으므로 목록으로 반환한다.
     List<Member> findByName(String name);
 }
 ```
+
+@Repository는 데이터 접근 계층의 역할을 나타내는 애너테이션입니다. MemberRepository는 JpaRepository에서 기본 CRUD 메서드를 상속받고, 이름이 일치하는 회원을 찾는 findByName()을 추가합니다. 동명이인이 있을 수 있으므로 검색 결과는 List<Member>로 반환합니다.
 
 ### 3.2.1 회원 등록
 
@@ -601,7 +603,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-// 클래스명과 테이블명이 다르면 @Table(name), 필드명과 컬럼명이 다르면 @Column(name)으로 매핑한다.
 @Entity
 @Table(name = "member")
 @Data
@@ -616,7 +617,6 @@ public class Member {
     @Column(name = "name")
     @NotBlank(message = "이름을 입력하세요")
     private String name;
-    // 이메일의 NOT NULL, UNIQUE 제약은 sql/schema.sql에서 정의한다.
     @NotBlank(message = "이메일을 입력하세요")
     @Email(message = "이메일 형식이 아닙니다")
     @Column(name = "email")
@@ -757,8 +757,8 @@ DTO(Data Transfer Object)는 요청이나 응답에서 전달할 값을 담는 �
 
 | 단계 | 사용하는 값·객체 | 처리 내용 |
 |---|---|---|
-| 요청 | memberId·title·description | 클라이언트가 작성자 ID와 게시글 내용을 보냅니다. |
-| 요청 DTO | ArticleCreateRequest | 컨트롤러가 JSON을 자바 객체로 받습니다. |
+| 요청 | memberId·title·description | 등록 시 작성자 ID는 요청 파라미터로, 제목과 본문은 JSON으로 보냅니다. |
+| 요청 DTO | ArticleRequest | 컨트롤러가 등록·수정 요청의 JSON을 자바 객체로 받습니다. |
 | 엔티티 처리 | Member, Article | 서비스가 실제 회원을 찾고 게시글의 작성자로 연결해 저장합니다. |
 | 응답 DTO | ArticleResponse | 저장 결과와 작성자 이름을 응답용 객체에 담습니다. |
 | 응답 | JSON | 클라이언트가 게시글 ID·내용·작성자 이름·날짜를 받습니다. |
@@ -775,32 +775,18 @@ DTO(Data Transfer Object)는 요청이나 응답에서 전달할 값을 담는 �
 
 ### 3.3.1 요청·응답 DTO 준비
 
-[ArticleCreateRequest.java](../spring-rest/src/main/java/com/example/demo/dto/ArticleCreateRequest.java)
+등록과 수정 요청의 JSON에는 모두 제목과 본문이 들어가므로 같은 ArticleRequest를 사용합니다. 등록에 필요한 작성자 ID는 요청 파라미터로 따로 전달합니다.
+
+[ArticleRequest.java](../spring-rest/src/main/java/com/example/demo/dto/ArticleRequest.java)
 
 ```java
 package com.example.demo.dto;
 
 import lombok.Data;
 
-// 등록 요청에는 작성자 ID와 제목, 본문만 받는다. 게시글 ID와 날짜는 서버에서 만든다.
+// 등록과 수정 요청의 제목과 본문을 받는다.
 @Data
-public class ArticleCreateRequest {
-    private Long memberId;
-    private String title;
-    private String description;
-}
-```
-
-[ArticleUpdateRequest.java](../spring-rest/src/main/java/com/example/demo/dto/ArticleUpdateRequest.java)
-
-```java
-package com.example.demo.dto;
-
-import lombok.Data;
-
-// 수정할 때는 제목과 본문만 받는다. 기존 작성자는 바꾸지 않는다.
-@Data
-public class ArticleUpdateRequest {
+public class ArticleRequest {
     private String title;
     private String description;
 }
@@ -831,9 +817,25 @@ public class ArticleResponse {
 }
 ```
 
-등록 DTO는 memberId·title·description, 수정 DTO는 title·description을 받습니다. 응답 DTO에는 게시글 ID·날짜·작성자 이름도 포함합니다. 같은 게시글이라도 용도별로 모양이 다릅니다. API가 받지 않는 값을 DTO에 넣지 않으면 역할을 더 쉽게 구분할 수 있습니다.
+ArticleRequest에는 title·description만 담으며, 등록과 수정에서 함께 사용합니다. 응답 DTO에는 게시글 ID·날짜·작성자 ID와 이름도 포함하여, 요청과 응답에 필요한 값을 구분합니다.
 
 ### 3.3.2 게시글 등록과 응답 변환
+
+ArticleRepository에도 @Repository를 선언합니다. 게시글의 기본 CRUD와 페이징 조회는 JpaRepository에서 상속받은 메서드를 사용합니다.
+
+[ArticleRepository.java](../spring-rest/src/main/java/com/example/demo/repository/ArticleRepository.java)
+
+```java
+package com.example.demo.repository;
+
+import com.example.demo.entity.Article;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ArticleRepository extends JpaRepository<Article, Long> {
+}
+```
 
 요청은 Controller → Service → Repository 순서로 전달됩니다. 서비스는 작성자가 실제로 존재하는지 확인하고 게시글과 연결합니다. 먼저 두 클래스의 선언부와 필드를 확인합니다. 아래는 메서드를 제외한 발췌이며, 이어지는 메서드를 각각의 클래스 안에서 읽습니다.
 
@@ -862,20 +864,18 @@ public class ArticleService {
 [ArticleController.java — create()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
 
 ```java
-// POST /articles: 요청 DTO로 게시글을 등록하고 201로 응답한다.
 @PostMapping
 @ResponseStatus(HttpStatus.CREATED)
-public ArticleResponse create(@RequestBody ArticleCreateRequest request) {
-    return articleService.create(request);
+public ArticleResponse create(@RequestParam("memberId") Long memberId, @RequestBody ArticleRequest request) {
+    return articleService.create(memberId, request);
 }
 ```
 
 [ArticleService.java — create()](../spring-rest/src/main/java/com/example/demo/service/ArticleService.java)
 
 ```java
-public ArticleResponse create(ArticleCreateRequest request) {
-    // 요청의 회원 ID로 실제 작성자를 찾아 게시글과 연결한다.
-    Member member = memberRepository.findById(request.getMemberId())
+public ArticleResponse create(Long memberId, ArticleRequest request) {
+    Member member = memberRepository.findById(memberId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "작성자를 찾을 수 없습니다."));
 
     Article article = Article.builder()
@@ -922,13 +922,12 @@ Accept: application/json
 
 ```http
 ### 2. 게시글 등록 (201 Created)
-# 회원 객체 전체 대신 작성자 ID와 제목, 본문을 보낸다.
-POST {{baseUrl}}/articles
+# 작성자 ID는 요청 파라미터로, 제목과 본문은 JSON으로 보낸다.
+POST {{baseUrl}}/articles?memberId={{articleMemberId}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "memberId": {{articleMemberId}},
   "title": "토요일 오전에 같이 산책하실 분",
   "description": "오전 열 시에 공원 입구에서 만나요. 한 바퀴 걷고 차도 마시면 좋겠습니다."
 }
@@ -941,7 +940,9 @@ Accept: application/json
 
 **코드 설명**
 
-서비스는 요청의 memberId로 실제 Member를 조회하고, Article의 작성자로 연결해 저장합니다. 이어서 toResponse()가 저장 결과를 응답 DTO로 바꿉니다. writerName에는 연결된 Member의 name을 넣습니다. 요청에는 작성자 ID만 있었지만, 응답에는 DB에서 확인한 작성자 이름도 포함되는 것입니다.
+@RequestParam("memberId")는 URL의 memberId 값을 받고, @RequestBody는 JSON의 제목과 본문을 ArticleRequest로 변환합니다. memberId는 필수 요청 파라미터이므로 생략하면 400으로 응답합니다. 컨트롤러는 두 값을 서비스의 create(memberId, request)에 전달합니다.
+
+서비스는 전달받은 memberId로 실제 Member를 조회하고, Article의 작성자로 연결해 저장합니다. 이어서 toResponse()가 저장 결과를 응답 DTO로 바꿉니다. writerName에는 연결된 Member의 name을 넣습니다. 요청에는 작성자 ID만 있었지만, 응답에는 DB에서 확인한 작성자 이름도 포함되는 것입니다.
 
 이 절의 저장은 기본 Repository 메서드인 save()를 사용합니다. Repository의 저장 메서드가 수행하는 트랜잭션과 여러 저장을 한꺼번에 묶는 서비스의 트랜잭션은 3.4절에서 연결해 설명합니다.
 
@@ -974,7 +975,6 @@ articles.http를 위에서부터 실행합니다. 첫 요청이 작성자 실제
 [ArticleController.java — findById()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
 
 ```java
-// GET /articles/게시글ID: 작성자 이름을 포함한 게시글을 조회한다.
 @GetMapping("/{id}")
 public ArticleResponse findById(@PathVariable("id") Long id) {
     return articleService.findById(id);
@@ -985,9 +985,19 @@ public ArticleResponse findById(@PathVariable("id") Long id) {
 
 ```java
 public ArticleResponse findById(Long id) {
-    Article article = articleRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+    Article article = findArticle(id);
     return toResponse(article);
+}
+```
+
+게시글 조회와 회원 조회는 대상이 다르지만, 조회한 데이터가 없을 때 예외를 발생시키는 흐름은 같습니다. 게시글의 단건 조회·수정·삭제에서 이 처리를 함께 사용하도록 다음 findArticle()을 ArticleService 클래스의 toResponse() 앞에 추가합니다.
+
+[ArticleService.java — findArticle()](../spring-rest/src/main/java/com/example/demo/service/ArticleService.java)
+
+```java
+private Article findArticle(Long id) {
+    return articleRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 }
 ```
 
@@ -1002,7 +1012,7 @@ Accept: application/json
 
 **코드 설명**
 
-Controller는 ID만 Service로 전달합니다. Service는 게시글을 찾고 없으면 404를 던집니다. 있으면 toResponse()에서 작성자 이름 등을 채웁니다.
+Controller는 ID를 Service로 전달하고, Service의 findById()는 공통 메서드 findArticle()로 게시글을 조회합니다. findArticle()은 게시글이 없으면 ResponseStatusException을 발생시켜 404로 응답하며, 클래스 내부에서만 사용하므로 private으로 선언합니다. 게시글이 있으면 toResponse()로 작성자 이름 등이 담긴 응답 DTO를 만듭니다.
 
 **실행과 예상 결과**
 
@@ -1012,16 +1022,15 @@ Controller는 ID만 Service로 전달합니다. Service는 게시글을 찾고 �
 
 ### 3.3.4 게시글 수정
 
-수정 요청의 DTO에는 바꿀 제목과 본문만 있습니다. 작성자는 그대로 유지합니다.
+수정 요청도 등록과 같은 ArticleRequest로 바꿀 제목과 본문을 받습니다. 수정 대상은 URL의 게시글 ID로 찾으며, memberId 요청 파라미터를 받지 않고 기존 작성자를 유지합니다.
 
 **실습 코드**
 
 [ArticleController.java — update()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
 
 ```java
-// PUT /articles/게시글ID: 제목과 본문을 수정한다.
 @PutMapping("/{id}")
-public ArticleResponse update(@PathVariable("id") Long id, @RequestBody ArticleUpdateRequest request) {
+public ArticleResponse update(@PathVariable("id") Long id, @RequestBody ArticleRequest request) {
     return articleService.update(id, request);
 }
 ```
@@ -1029,9 +1038,8 @@ public ArticleResponse update(@PathVariable("id") Long id, @RequestBody ArticleU
 [ArticleService.java — update()](../spring-rest/src/main/java/com/example/demo/service/ArticleService.java)
 
 ```java
-public ArticleResponse update(Long id, ArticleUpdateRequest request) {
-    Article article = articleRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+public ArticleResponse update(Long id, ArticleRequest request) {
+    Article article = findArticle(id);
 
     article.setTitle(request.getTitle());
     article.setDescription(request.getDescription());
@@ -1058,7 +1066,7 @@ Accept: application/json
 
 **코드 설명**
 
-조회한 Article의 두 필드를 바꾸고 save()가 반환한 객체로 DTO를 만듭니다. 저장 과정에서 업데이트가 발생하면 PreUpdate가 수정일을 갱신합니다. 같은 시각의 정밀도 안에서 즉시 수정하면 표시된 시각이 같아 보일 수 있습니다.
+findArticle(id)로 조회한 Article의 두 필드를 바꾸고 save()가 반환한 객체로 DTO를 만듭니다. 저장 과정에서 업데이트가 발생하면 PreUpdate가 수정일을 갱신합니다. 같은 시각의 정밀도 안에서 즉시 수정하면 표시된 시각이 같아 보일 수 있습니다.
 
 **실행과 예상 결과**
 
@@ -1075,8 +1083,6 @@ Page에는 목록뿐 아니라 전체 개수·현재 페이지 정보도 있습�
 [ArticleController.java — findAll()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
 
 ```java
-// GET /articles?page=0&size=5&sort=id,desc: 페이지 번호, 크기, 정렬 조건을 받는다.
-// PageableDefault는 요청에서 생략한 조건의 기본값이다. 페이지 번호는 0부터 시작한다.
 @GetMapping
 public Page<ArticleResponse> findAll(
         @PageableDefault(page = 0, size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -1136,7 +1142,6 @@ Controller는 삭제 성공 상태를, Service는 실제 조회·삭제를 담�
 [ArticleController.java — delete()](../spring-rest/src/main/java/com/example/demo/controller/ArticleController.java)
 
 ```java
-// DELETE /articles/게시글ID: 삭제 후 본문 없이 204로 응답한다.
 @DeleteMapping("/{id}")
 @ResponseStatus(HttpStatus.NO_CONTENT)
 public void delete(@PathVariable("id") Long id) {
@@ -1148,8 +1153,7 @@ public void delete(@PathVariable("id") Long id) {
 
 ```java
 public void delete(Long id) {
-    Article article = articleRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+    Article article = findArticle(id);
     articleRepository.delete(article);
 }
 ```
@@ -1164,7 +1168,7 @@ DELETE {{baseUrl}}/articles/{{articleId}}
 
 **코드 설명**
 
-존재 여부를 확인한 게시글만 삭제합니다. void 반환과 204 상태로 응답 본문을 비웁니다. articles.http에서 새로 등록한 글을 대상으로 실행합니다.
+findArticle(id)로 게시글을 조회한 뒤 delete()에 전달하며, 게시글이 없으면 공통 메서드에서 예외가 발생하여 404로 응답합니다. 삭제에 성공하면 void 반환과 204 상태로 응답 본문을 비웁니다. articles.http에서 새로 등록한 글을 대상으로 실행합니다.
 
 **실행과 예상 결과**
 
@@ -1224,12 +1228,10 @@ import java.util.List;
 public class MemberService {
     private final MemberRepository memberRepository;
 
-    // 여러 회원의 가입을 하나로 묶는다. 중간에 예외가 발생하면 앞의 가입도 취소된다.
     @Transactional
     public List<Member> registerAll(List<Member> members) {
         List<Member> savedMembers = new ArrayList<>();
         for (Member member : members) {
-            // 신규 회원의 ID는 DB에서 생성한다.
             member.setId(null);
             Member savedMember = memberRepository.save(member);
             savedMembers.add(savedMember);
